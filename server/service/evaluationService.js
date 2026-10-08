@@ -70,6 +70,8 @@ const evaluateAnswer = async (
 
         case "MCQ":
 
+        case "IMAGE":
+
             if (
 
                 answer.selectedOption ===

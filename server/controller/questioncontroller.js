@@ -1,6 +1,19 @@
 const Question = require("../model/Question");
 const Quiz = require("../model/Quiz");
 
+const attemptQuestionFields = [
+    "questionType",
+    "question",
+    "difficulty",
+    "marks",
+    "image",
+    "options",
+    "coding.language",
+    "coding.starterCode",
+    "coding.constraints",
+    "longAnswer.minimumWords"
+].join(" ");
+
 /*
 =====================================
 Create Question
@@ -125,11 +138,15 @@ exports.getQuestions = async (req, res) => {
 
     try {
 
-        const questions = await Question.find({
-
+        const questionQuery = Question.find({
             quiz: req.params.quizId
-
         });
+
+        if (req.user.role !== "admin") {
+            questionQuery.select(attemptQuestionFields);
+        }
+
+        const questions = await questionQuery.sort({ createdAt: 1 });
 
         res.json({
 
@@ -151,6 +168,34 @@ exports.getQuestions = async (req, res) => {
 
             message: error.message
 
+        });
+
+    }
+
+};
+
+exports.getAttemptQuestions = async (req, res) => {
+
+    try {
+
+        const questions = await Question.find({
+            quiz: req.params.quizId
+        })
+        .select(attemptQuestionFields)
+        .sort({ createdAt: 1 })
+        .lean();
+
+        return res.status(200).json({
+            success: true,
+            total: questions.length,
+            questions
+        });
+
+    } catch (error) {
+
+        return res.status(500).json({
+            success: false,
+            message: error.message
         });
 
     }

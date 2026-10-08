@@ -11,6 +11,13 @@ import About from './pages/public/About';
 import Login from './pages/public/Login';
 import Register from './pages/public/Register';
 import Profile from './pages/user/Profile';
+import QuizLibrary from './pages/user/QuizLibrary';
+import QuizDetail from './pages/user/QuizDetail';
+import QuizAttempt from './pages/user/QuizAttempt';
+import QuizResult from './pages/user/QuizResult';
+import QuizHistory from './pages/user/QuizHistory';
+import BattleLobby from './pages/user/BattleLobby';
+import BattleRoom from './pages/user/BattleRoom';
 import AdminDashboard from './pages/admin/AdminDashboard';
 
 // Route Guards
@@ -52,6 +59,14 @@ function App() {
             </ProtectedRoute>
           } 
         />
+        <Route path="quizzes" element={<ProtectedRoute><QuizLibrary /></ProtectedRoute>} />
+        <Route path="coding" element={<ProtectedRoute><QuizLibrary codingOnly /></ProtectedRoute>} />
+        <Route path="quiz/:quizId" element={<ProtectedRoute><QuizDetail /></ProtectedRoute>} />
+        <Route path="quiz/:quizId/attempt/:responseId" element={<ProtectedRoute><QuizAttempt /></ProtectedRoute>} />
+        <Route path="results/:responseId" element={<ProtectedRoute><QuizResult /></ProtectedRoute>} />
+        <Route path="my-results" element={<ProtectedRoute><QuizHistory /></ProtectedRoute>} />
+        <Route path="battle" element={<ProtectedRoute><BattleLobby /></ProtectedRoute>} />
+        <Route path="battle/:roomId" element={<ProtectedRoute><BattleRoom /></ProtectedRoute>} />
       </Route>
 
       {/* Admin Routes with Admin Layout */}

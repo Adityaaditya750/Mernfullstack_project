@@ -154,6 +154,9 @@ const totalQuizMarks = questions.reduce(
     // IMPORTANT:
     // Total marks of ALL questions
     totalMarks: totalQuizMarks,
+    totalQuestions,
+    quizDuration: Number(quiz.quizDuration) || 20,
+    durationSeconds: (Number(quiz.quizDuration) || 20) * 60,
 
     obtainedMarks: 0,
 
@@ -348,6 +351,28 @@ const obtainedMarks =
 
 const isCorrect =
     evaluation.isCorrect || false;
+
+response.answers.push({
+    question: question._id,
+    questionType: question.questionType,
+    selectedOption: Number.isInteger(selectedOption) ? selectedOption : null,
+    codingAnswer: codingAnswer || "",
+    codingLanguage: codingLanguage || "",
+    longAnswer: longAnswer || "",
+    fillBlankAnswer: fillBlankAnswer || "",
+    trueFalseAnswer: typeof trueFalseAnswer === "boolean" ? trueFalseAnswer : null,
+    obtainedMarks,
+    maxMarks: question.marks,
+    isCorrect,
+    evaluatedByAI: evaluation.evaluatedByAI || false,
+    aiFeedback: evaluation.aiFeedback || "",
+    timeTaken: evaluation.timeTaken ?? timeTaken ?? 0
+});
+
+response.attemptedQuestions = response.answers.length;
+response.correctAnswers = response.answers.filter(answer => answer.isCorrect).length;
+response.wrongAnswers = response.attemptedQuestions - response.correctAnswers;
+
         /*
         =====================================
         Update Score
@@ -365,16 +390,6 @@ if (response.totalMarks > 0) {
     );
 
 }
-
-        response.percentage = Number(
-
-            (
-
-                (response.obtainedMarks / response.totalMarks) * 100
-
-            ).toFixed(2)
-
-        );
 
         await response.save();
 
@@ -398,6 +413,195 @@ if (response.totalMarks > 0) {
 
             message: error.message
 
+        });
+
+    }
+
+};
+
+exports.completeQuiz = async (req, res) => {
+
+    try {
+
+        const { responseId, answers = [] } = req.body;
+
+        if (!Array.isArray(answers)) {
+
+            return res.status(400).json({
+                success: false,
+                message: "Answers must be provided as a list."
+            });
+
+        }
+
+        const response = await Response.findOne({
+            _id: responseId,
+            user: req.user._id
+        });
+
+        if (!response) {
+
+            return res.status(404).json({
+                success: false,
+                message: "Response not found"
+            });
+
+        }
+
+        if (response.submitted) {
+
+            return res.status(200).json({
+                success: true,
+                response
+            });
+
+        }
+
+        const room = response.room
+            ? await Room.findById(response.room)
+            : null;
+
+        if (response.room && (!room || room.status !== "Started")) {
+
+            return res.status(400).json({
+                success: false,
+                message: "This battle is no longer accepting answers."
+            });
+
+        }
+
+        const submissionTime = new Date();
+        const submittedQuestionIds = new Set(
+            response.answers.map(answer => answer.question.toString())
+        );
+
+        for (const submittedAnswer of answers) {
+
+            if (!submittedAnswer || typeof submittedAnswer.questionId !== "string") {
+
+                return res.status(400).json({
+                    success: false,
+                    message: "Each answer must include a valid question ID."
+                });
+
+            }
+
+            const question = await Question.findOne({
+                _id: submittedAnswer.questionId,
+                quiz: response.quiz
+            });
+
+            if (!question) {
+
+                return res.status(400).json({
+                    success: false,
+                    message: "An answer belongs to a different quiz."
+                });
+
+            }
+
+            if (submittedQuestionIds.has(question._id.toString())) {
+                continue;
+            }
+
+            const evaluation = await evaluateAnswer(question._id, submittedAnswer);
+
+            response.answers.push({
+                question: question._id,
+                questionType: question.questionType,
+                selectedOption: Number.isInteger(submittedAnswer.selectedOption)
+                    ? submittedAnswer.selectedOption
+                    : null,
+                codingAnswer: submittedAnswer.codingAnswer || "",
+                codingLanguage: submittedAnswer.codingLanguage || "",
+                longAnswer: submittedAnswer.longAnswer || "",
+                fillBlankAnswer: submittedAnswer.fillBlankAnswer || "",
+                trueFalseAnswer: typeof submittedAnswer.trueFalseAnswer === "boolean"
+                    ? submittedAnswer.trueFalseAnswer
+                    : null,
+                obtainedMarks: evaluation.obtainedMarks || 0,
+                maxMarks: question.marks,
+                isCorrect: evaluation.isCorrect || false,
+                evaluatedByAI: evaluation.evaluatedByAI || false,
+                aiFeedback: evaluation.aiFeedback || "",
+                timeTaken: evaluation.timeTaken || 0
+            });
+
+            submittedQuestionIds.add(question._id.toString());
+
+        }
+
+        response.totalQuestions = response.totalQuestions
+            || await Question.countDocuments({ quiz: response.quiz });
+        response.attemptedQuestions = response.answers.length;
+        response.skippedQuestions = Math.max(
+            0,
+            response.totalQuestions - response.attemptedQuestions
+        );
+        response.correctAnswers = response.answers.filter(answer => answer.isCorrect).length;
+        response.wrongAnswers = response.attemptedQuestions - response.correctAnswers;
+        response.obtainedMarks = response.answers.reduce(
+            (total, answer) => total + answer.obtainedMarks,
+            0
+        );
+        response.percentage = response.totalMarks > 0
+            ? Number(((response.obtainedMarks / response.totalMarks) * 100).toFixed(2))
+            : 0;
+        response.submitted = true;
+        response.submittedAt = submissionTime;
+
+        const durationSeconds = response.durationSeconds
+            || (Number((await Quiz.findById(response.quiz).select("quizDuration"))?.quizDuration) || 20) * 60;
+        const deadline = room?.quizEndTime
+            || new Date(new Date(response.startedAt).getTime() + durationSeconds * 1000);
+        response.autoSubmitted = submissionTime >= deadline;
+
+        await response.save();
+
+        if (room) {
+
+            const player = room.players.find(
+                item => item.user.toString() === req.user._id.toString()
+            );
+
+            if (player) {
+                player.score = response.obtainedMarks;
+                await room.save();
+            }
+
+            const pendingResponses = await Response.countDocuments({
+                room: room._id,
+                submitted: false
+            });
+
+            if (pendingResponses === 0) {
+
+                room.status = "Completed";
+                room.isQuizStarted = false;
+                room.isQuizEnded = true;
+                room.endedAt = new Date();
+
+                const rankedPlayers = [...room.players].sort(
+                    (left, right) => right.score - left.score
+                );
+
+                room.winner = rankedPlayers[0]?.user || null;
+                await room.save();
+
+            }
+
+        }
+
+        return res.status(200).json({
+            success: true,
+            response
+        });
+
+    } catch (error) {
+
+        return res.status(500).json({
+            success: false,
+            message: error.message
         });
 
     }
@@ -669,6 +873,13 @@ exports.getResult = async (req, res) => {
         })
         .populate({
 
+            path: "room",
+
+            select: "roomName status endedAt quizEndTime"
+
+        })
+        .populate({
+
             path: "user",
 
             select: "name email"
@@ -753,9 +964,77 @@ wrongAnswers,
 
                 submittedAt: response.submittedAt,
 
+                serverNow: new Date(),
+
+                quizDuration: response.quizDuration,
+
+                durationSeconds: response.durationSeconds,
+
+                room: response.room,
+
                 answers: response.answers
 
             }
+
+        });
+
+    }
+
+    catch (error) {
+
+        return res.status(500).json({
+
+            success: false,
+
+            message: error.message
+
+        });
+
+    }
+
+};
+
+/*
+=====================================================
+Get Current User's Submitted Quiz Results
+=====================================================
+*/
+
+exports.getMyResults = async (req, res) => {
+
+    try {
+
+        const results = await Response.find({
+
+            user: req.user._id,
+
+            submitted: true
+
+        })
+        .select("quiz room obtainedMarks totalMarks percentage submittedAt autoSubmitted")
+        .populate({
+
+            path: "quiz",
+
+            select: "title category topic difficulty"
+
+        })
+        .populate({
+
+            path: "room",
+
+            select: "roomName"
+
+        })
+        .sort({ submittedAt: -1 })
+        .limit(100)
+        .lean();
+
+        return res.status(200).json({
+
+            success: true,
+
+            results
 
         });
 

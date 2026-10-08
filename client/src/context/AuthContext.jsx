@@ -1,50 +1,62 @@
 import { createContext, useState, useEffect, useContext } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { apiRequest, jsonBody } from '../lib/api';
 
 const AuthContext = createContext();
 
-const API_URL = 'http://localhost:9000/api';
-
 export const AuthProvider = ({ children }) => {
+  const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Restore login when page is refreshed
   useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    const storedToken = localStorage.getItem('token');
+    const restoreSession = async () => {
+      const token = localStorage.getItem('token');
+      const storedUser = localStorage.getItem('user');
 
-    if (storedUser && storedToken) {
-      try {
-        setUser(JSON.parse(storedUser));
-      } catch (error) {
-        console.error('Invalid stored user:', error);
+      if (!token || !storedUser) {
         localStorage.removeItem('user');
         localStorage.removeItem('token');
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const currentUser = await apiRequest('/auth/me');
+        setUser(currentUser);
+        localStorage.setItem('user', JSON.stringify(currentUser));
+      } catch {
+        localStorage.removeItem('user');
+        localStorage.removeItem('token');
+        setUser(null);
+      } finally {
+        setLoading(false);
       }
     }
 
-    setLoading(false);
+    restoreSession();
   }, []);
 
-  // LOGIN
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      localStorage.removeItem('user');
+      localStorage.removeItem('token');
+      setUser(null);
+    };
+
+    window.addEventListener('quizarena:unauthorized', handleUnauthorized);
+    return () => window.removeEventListener('quizarena:unauthorized', handleUnauthorized);
+  }, []);
+
   const login = async (email, password) => {
     try {
-      const response = await fetch(`${API_URL}/auth/login`, {
+      const data = await apiRequest('/auth/login', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+        body: jsonBody({
           email,
           password,
         }),
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Login failed');
-      }
 
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data));
@@ -63,27 +75,17 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // REGISTER
   const register = async (name, email, password) => {
     try {
-      const response = await fetch(`${API_URL}/auth/register`, {
+      const data = await apiRequest('/auth/register', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+        body: jsonBody({
           name,
           email,
           password,
         }),
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Registration failed');
-      }
-
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data));
 
@@ -101,14 +103,17 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // LOGOUT
-  const logout = () => {
+  const logout = async () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-
     setUser(null);
+    navigate('/login', { replace: true });
 
-    window.location.href = '/login';
+    try {
+      await apiRequest('/auth/logout', { method: 'POST' });
+    } catch (error) {
+      console.error('Server logout failed:', error.message);
+    }
   };
 
   return (

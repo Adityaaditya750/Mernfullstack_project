@@ -1,5 +1,7 @@
 const Room = require("../model/Room");
 const Question = require("../model/Question");
+const Quiz = require("../model/Quiz");
+const Response = require("../model/Response");
 
 /*
 ====================================
@@ -17,15 +19,73 @@ exports.startBattleService = async (roomId) => {
 
     }
 
+    const quiz = await Quiz.findById(room.quiz);
+
+    if (!quiz) {
+
+        throw new Error("Quiz Not Found");
+
+    }
+
+    const questions = await Question.find({ quiz: room.quiz }).select("marks");
+
+    if (questions.length === 0) {
+
+        throw new Error("Quiz Has No Questions");
+
+    }
+
+    const startedAt = new Date();
+    const durationSeconds = room.battleTime > 0
+        ? room.battleTime
+        : (Number(quiz.quizDuration) || 20) * 60;
+    const totalMarks = questions.reduce((total, question) => total + question.marks, 0);
+
+    for (const player of room.players) {
+
+        let response = await Response.findOne({
+            quiz: room.quiz,
+            room: room._id,
+            user: player.user
+        });
+
+        if (!response) {
+
+            response = await Response.create({
+                quiz: room.quiz,
+                room: room._id,
+                user: player.user,
+                totalQuestions: questions.length,
+                totalMarks,
+                quizDuration: durationSeconds / 60,
+                durationSeconds,
+                startedAt,
+                submitted: false
+            });
+
+        }
+
+        player.responseId = response._id;
+        player.score = 0;
+
+    }
+
     room.status = "Started";
 
     room.isQuizStarted = true;
 
     room.currentQuestion = 0;
 
-    room.currentQuestionStartTime = new Date();
+    room.currentQuestionStartTime = startedAt;
 
-    room.startedAt = new Date();
+    room.startedAt = startedAt;
+    room.quizDuration = durationSeconds;
+    room.quizEndTime = new Date(startedAt.getTime() + durationSeconds * 1000);
+    room.timerMode = "QUIZ";
+    room.totalQuestions = questions.length;
+    room.isQuizEnded = false;
+    room.endedAt = null;
+    room.winner = null;
 
     await room.save();
 

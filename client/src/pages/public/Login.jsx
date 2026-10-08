@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowRight, Eye, EyeOff, Lock, Mail, Trophy } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -40,6 +40,7 @@ const cardVariants = {
 
 const Login = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login } = useAuth();
 
   const [email, setEmail] = useState('');
@@ -95,11 +96,12 @@ const Login = () => {
     const result = await login(email, password);
 
     if (result.success) {
-      if (result.user.role === 'admin') {
-        navigate('/admin');
-      } else {
-        navigate('/profile');
-      }
+      const requestedPath = location.state?.from;
+      const destination = requestedPath?.pathname
+        && !['/login', '/register'].includes(requestedPath.pathname)
+        ? `${requestedPath.pathname}${requestedPath.search || ''}${requestedPath.hash || ''}`
+        : result.user.role === 'admin' ? '/admin' : '/profile';
+      navigate(destination, { replace: true });
     } else {
       setError(result.message || 'Invalid email or password.');
     }
@@ -130,9 +132,9 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-[calc(100vh-64px)] overflow-hidden bg-[#f4f7f7]">
+    <main className="min-h-[calc(100dvh-4rem)] w-full overflow-x-clip bg-[#f4f7f7]">
 
-      <div className="mx-auto grid min-h-[calc(100vh-64px)] max-w-[1500px] lg:grid-cols-[1.05fr_0.95fr]">
+      <div className="mx-auto grid min-h-[calc(100dvh-4rem)] w-full max-w-[1500px] lg:grid-cols-[1.05fr_0.95fr]">
 
         {/* =====================================================
             LEFT SIDE — ANIMATED QUIZ ARENA
@@ -178,7 +180,7 @@ const Login = () => {
           <FloatingPlus className="left-[20%] top-[30%]" delay={0} />
           <FloatingPlus className="right-[20%] top-[45%]" delay={1.5} />
 
-          <div className="relative z-10 flex w-full flex-col px-10 py-14 xl:px-20">
+          <div className="relative z-10 flex w-full flex-col px-8 py-10 xl:px-12 xl:py-12 2xl:px-20">
 
             {/* Logo */}
             <motion.div
@@ -208,13 +210,13 @@ const Login = () => {
                 delay: 0.15,
                 ease: 'easeOut',
               }}
-              className="mt-24 max-w-xl"
+              className="mt-12 max-w-xl xl:mt-20"
             >
               <p className="mb-5 text-xs font-semibold uppercase tracking-[0.3em] text-[#00d98b]">
                 Multiplayer Quiz Platform
               </p>
 
-              <h1 className="text-5xl font-semibold leading-[1.08] tracking-tight text-white xl:text-6xl">
+              <h1 className="text-4xl font-semibold leading-[1.08] tracking-tight text-white xl:text-5xl 2xl:text-6xl">
                 Compete.
                 <br />
                 Learn.
@@ -246,7 +248,7 @@ const Login = () => {
                 FLOATING UI CARDS
             ================================================== */}
 
-            <div className="relative mt-16 h-48 max-w-xl">
+            <div className="relative mt-10 h-40 max-w-xl xl:mt-14 xl:h-48">
 
               {/* Quiz card */}
               <motion.div
@@ -411,7 +413,7 @@ const Login = () => {
             RIGHT SIDE — LOGIN
         ====================================================== */}
 
-        <section className="relative flex items-center justify-center px-5 py-12 sm:px-8">
+        <section className="relative flex min-w-0 items-center justify-center px-4 py-8 sm:px-8 sm:py-10 lg:px-6 xl:px-12">
 
           {/* Mobile background decoration */}
           <motion.div
@@ -455,7 +457,7 @@ const Login = () => {
               transition={{
                 duration: 0.6,
               }}
-              className="mb-10 flex items-center gap-3 lg:hidden"
+              className="mb-6 flex items-center gap-3 sm:mb-8 lg:hidden"
             >
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#063b49] text-[#00d98b]">
                 <Trophy size={21} />
@@ -479,7 +481,7 @@ const Login = () => {
                 damping: 25,
               }}
             >
-              <Card className="overflow-hidden rounded-[28px] border border-white/80 bg-[#f8f9f9] p-7 shadow-[0_25px_80px_rgba(6,59,73,0.12)] sm:p-9">
+              <Card className="w-full overflow-hidden rounded-2xl border border-white/80 bg-[#f8f9f9] p-5 shadow-[0_25px_80px_rgba(6,59,73,0.12)] sm:rounded-[28px] sm:p-7 md:p-9 lg:p-7 xl:p-9">
 
                 {/* Animated title */}
                 <AnimatePresence mode="popLayout" initial={false}>
@@ -539,7 +541,7 @@ const Login = () => {
                       ? handleLogin
                       : handleContinue
                   }
-                  className="mt-8"
+                  className="mt-6 sm:mt-8"
                 >
 
                   {/* Error */}
@@ -764,7 +766,7 @@ const Login = () => {
           </motion.div>
         </section>
       </div>
-    </div>
+    </main>
   );
 };
 

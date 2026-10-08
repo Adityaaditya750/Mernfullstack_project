@@ -8,6 +8,8 @@ createQuestion,
 
 getQuestions,
 
+getAttemptQuestions,
+
 updateQuestion,
 
 deleteQuestion
@@ -41,5 +43,7 @@ Users
 */
 
 router.get("/:quizId", protect, getQuestions);
+
+router.get("/:quizId/attempt", protect, getAttemptQuestions);
 
 module.exports = router;

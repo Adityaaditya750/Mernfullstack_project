@@ -246,6 +246,11 @@ const responseSchema = new mongoose.Schema(
         default: 0
     },
 
+    durationSeconds: {
+        type: Number,
+        default: 0
+    },
+
     timeTaken: {
         type: Number,
         default: 0
@@ -307,3 +312,7 @@ const responseSchema = new mongoose.Schema(
 }
 
 );
+
+module.exports =
+    mongoose.models.Response ||
+    mongoose.model("Response", responseSchema);

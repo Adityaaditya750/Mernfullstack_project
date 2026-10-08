@@ -8,11 +8,15 @@ const {
 
     submitAnswer,
 
+    completeQuiz,
+
     finishQuiz,
 
     autoSubmitQuiz,
 
-    getResult
+    getResult,
+
+    getMyResults
 
 } = require("../controller/responseController");
 
@@ -26,9 +30,13 @@ router.post("/start", protect, startQuiz);
 
 router.post("/submit", protect, submitAnswer);
 
+router.post("/complete", protect, completeQuiz);
+
 router.post("/finish", protect, finishQuiz);
 
 router.post("/auto-submit", protect, autoSubmitQuiz);
+
+router.get("/history", protect, getMyResults);
 
 router.get("/result/:responseId", protect, getResult);
 

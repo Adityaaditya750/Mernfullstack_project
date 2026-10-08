@@ -5,24 +5,23 @@ const Sidebar = () => {
   const { logout } = useAuth();
 
   return (
-    <div className="w-64 bg-gray-800 h-screen text-white flex flex-col">
-      <div className="p-4 text-2xl font-bold border-b border-gray-700">
+    <aside className="flex w-full shrink-0 flex-col bg-gray-800 text-white md:sticky md:top-0 md:h-screen md:w-64">
+      <div className="border-b border-gray-700 p-4 text-xl font-bold sm:text-2xl">
         Admin Panel
       </div>
-      <nav className="flex-1 p-4 space-y-2">
-        <Link to="/admin" className="block py-2 px-4 hover:bg-gray-700 rounded">Dashboard</Link>
-        <Link to="/admin/users" className="block py-2 px-4 hover:bg-gray-700 rounded">Users</Link>
-        <Link to="/" className="block py-2 px-4 hover:bg-gray-700 rounded text-gray-400">Back to Site</Link>
+      <nav className="flex flex-wrap gap-1 p-2 sm:p-3 md:flex-1 md:flex-col md:gap-2 md:p-4">
+        <Link to="/admin" className="rounded px-3 py-2 text-sm hover:bg-gray-700 sm:px-4">Quiz studio</Link>
+        <Link to="/" className="rounded px-3 py-2 text-sm text-gray-400 hover:bg-gray-700 sm:px-4">Back to Site</Link>
       </nav>
-      <div className="p-4 border-t border-gray-700">
-        <button 
-          onClick={logout} 
-          className="w-full bg-red-600 py-2 rounded hover:bg-red-700"
+      <div className="border-t border-gray-700 p-3 sm:p-4 md:mt-auto">
+        <button
+          onClick={logout}
+          className="w-full rounded bg-red-600 py-2 text-sm hover:bg-red-700 sm:text-base"
         >
           Logout
         </button>
       </div>
-    </div>
+    </aside>
   );
 };
 

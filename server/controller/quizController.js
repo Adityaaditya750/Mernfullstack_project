@@ -385,13 +385,37 @@ exports.generateAIQuiz = async (req, res) => {
         ===============================
         */
 
+        const allowedCategories = [
+            "Programming",
+            "Database",
+            "Web Development",
+            "AI & ML",
+            "Networking",
+            "Operating System",
+            "Aptitude",
+            "General Knowledge",
+            "Others"
+        ];
+        const allowedDifficulties = ["Easy", "Medium", "Hard"];
+        const allowedQuestionTypes = [
+            "MCQ",
+            "CODING",
+            "LONG",
+            "TRUE_FALSE",
+            "FILL"
+        ];
+
         if (
-            !title ||
-            !category ||
-            !topic ||
-            !difficulty ||
-            !questionCount ||
-            !questionTypes
+            typeof title !== "string" || !title.trim() ||
+            typeof topic !== "string" || !topic.trim() ||
+            !allowedCategories.includes(category) ||
+            !allowedDifficulties.includes(difficulty) ||
+            !Number.isInteger(questionCount) ||
+            questionCount < 1 ||
+            questionCount > 30 ||
+            !Array.isArray(questionTypes) ||
+            questionTypes.length === 0 ||
+            questionTypes.some(type => !allowedQuestionTypes.includes(type))
         ) {
 
             await session.abortTransaction();
@@ -401,7 +425,7 @@ exports.generateAIQuiz = async (req, res) => {
 
                 success: false,
 
-                message: "All required fields are missing."
+                message: "Provide a title, topic, valid category and difficulty, 1–30 questions, and at least one supported question type."
 
             });
 
@@ -429,7 +453,17 @@ exports.generateAIQuiz = async (req, res) => {
 
         const questions = JSON.parse(cleaned);
 
-        if (!Array.isArray(questions) || questions.length === 0) {
+        if (
+            !Array.isArray(questions) ||
+            questions.length !== questionCount ||
+            questions.some(question =>
+                !question ||
+                typeof question.question !== "string" ||
+                !question.question.trim() ||
+                !allowedQuestionTypes.includes(question.questionType) ||
+                !questionTypes.includes(question.questionType)
+            )
+        ) {
 
             await session.abortTransaction();
             session.endSession();
@@ -438,7 +472,7 @@ exports.generateAIQuiz = async (req, res) => {
 
                 success: false,
 
-                message: "Gemini returned invalid questions."
+                message: "The AI service did not return the requested number of valid questions. Please try again."
 
             });
 
@@ -546,6 +580,17 @@ for (const q of questions) {
 
 }
 
+if (questionDocuments.length !== questionCount) {
+    await session.abortTransaction();
+    session.endSession();
+
+    return res.status(400).json({
+        success: false,
+        message: "The AI service returned duplicate questions. Please try generating the quiz again."
+    });
+}
+
+
 /*
 ====================================
 Save Questions
@@ -584,7 +629,7 @@ return res.status(201).json({
 
     success: true,
 
-    message: "AI Quiz Generated Successfully",
+    message: `AI quiz "${createdQuiz.title}" generated successfully with ${questionDocuments.length} questions.`,
 
     quiz: createdQuiz,
 
@@ -602,11 +647,21 @@ return res.status(201).json({
 
     console.error(error);
 
-    return res.status(500).json({
+    const upstreamMessage = typeof error?.message === "string"
+        ? error.message
+        : "";
+    const invalidGeminiCredentials =
+        error?.status === 401 ||
+        error?.code === 401 ||
+        /\bUNAUTHENTICATED\b|invalid authentication credentials/i.test(upstreamMessage);
+
+    return res.status(invalidGeminiCredentials ? 502 : 500).json({
 
         success: false,
 
-        message: error.message
+        message: invalidGeminiCredentials
+            ? "Gemini rejected the server credentials. Set a valid Gemini API key as GEMINI_API_KEY in server/.env, confirm the Generative Language API is available for that key, then restart the backend."
+            : "AI quiz generation failed on the server. Check the backend logs and Gemini API availability, then try again."
 
     });
 

@@ -254,7 +254,27 @@ exports.getRoom = async (req, res) => {
 
         }
 
-        res.json(room);
+        const currentPlayer = room.players.find(
+            player => player.user._id.toString() === req.user._id.toString()
+        );
+
+        if (!currentPlayer) {
+
+            return res.status(403).json({
+                success: false,
+                message: "You are not a player in this room."
+            });
+
+        }
+
+        const roomData = room.toObject();
+        const myResponseId = currentPlayer.responseId || null;
+        roomData.players.forEach(player => {
+            delete player.responseId;
+        });
+        roomData.myResponseId = myResponseId;
+
+        res.json(roomData);
 
     }
 
@@ -300,6 +320,15 @@ exports.leaveRoom = async (req, res) => {
 
                 message: "Room Not Found"
 
+            });
+
+        }
+
+        if (room.status !== "Waiting") {
+
+            return res.status(400).json({
+                success: false,
+                message: "Players cannot leave after a battle has started."
             });
 
         }
@@ -494,6 +523,15 @@ exports.startRoom = async (req, res) => {
 
         }
 
+        if (room.status !== "Waiting") {
+
+            return res.status(400).json({
+                success: false,
+                message: "This battle has already started."
+            });
+
+        }
+
         /*
         ====================================
         Only Host Can Start
@@ -607,6 +645,15 @@ exports.selectQuiz = async (req, res) => {
                 success: false,
                 message: "Room Not Found"
             });
+        }
+
+        if (room.status !== "Waiting") {
+
+            return res.status(400).json({
+                success: false,
+                message: "The quiz cannot be changed after the battle starts."
+            });
+
         }
 
         // Only Host Can Select Quiz

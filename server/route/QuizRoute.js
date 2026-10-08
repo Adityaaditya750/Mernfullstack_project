@@ -22,8 +22,8 @@ Admin Routes
 // Create Manual Quiz
 router.post("/create", protect, adminOnly, createQuiz);
 
-// Generate AI Quiz
-router.post("/generate-ai", protect, adminOnly, generateAIQuiz);
+// Any authenticated user may generate a quiz; management routes remain admin-only.
+router.post("/generate-ai", protect, generateAIQuiz);
 
 // Update Quiz
 router.put("/update/:quizId", protect, adminOnly, updateQuiz);

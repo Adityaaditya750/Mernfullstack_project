@@ -31,6 +31,12 @@ const roomSchema = new mongoose.Schema(
                 ref:"User"
             },
 
+            responseId:{
+                type:mongoose.Schema.Types.ObjectId,
+                ref:"Response",
+                default:null
+            },
+
             joinedAt:{
                 type:Date,
                 default:Date.now
@@ -112,7 +118,7 @@ quizDuration: {
 timerMode: {
     type: String,
     enum: ["QUESTION", "QUIZ"],
-    default: "QUESTION"
+    default: "QUIZ"
 },
 
 battleTime: {

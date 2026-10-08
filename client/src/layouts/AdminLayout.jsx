@@ -5,19 +5,28 @@ import { useAuth } from '../context/AuthContext';
 const AdminLayout = () => {
   const { user, loading } = useAuth();
 
-  if (loading) return <div>Loading...</div>;
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center px-4 text-sm text-slate-600" role="status">
+        Checking your session...
+      </div>
+    );
+  }
 
-  // Protect Admin Route
-  if (!user || user.role !== 'admin') {
-    return <Navigate to="/" replace />;
+  if (!user) {
+    return <Navigate to="/login" replace state={{ from: { pathname: '/admin' } }} />;
+  }
+
+  if (user.role !== 'admin') {
+    return <Navigate to="/profile" replace />;
   }
 
   return (
-    <div className="flex min-h-screen bg-gray-100">
+    <div className="flex min-h-screen min-w-0 flex-col bg-gray-100 md:flex-row">
       <Sidebar />
-      <div className="flex-1 p-8 overflow-y-auto h-screen">
+      <main className="min-w-0 flex-1 p-4 sm:p-6 md:h-screen md:overflow-y-auto lg:p-8">
         <Outlet />
-      </div>
+      </main>
     </div>
   );
 };

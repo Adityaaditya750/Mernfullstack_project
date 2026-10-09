@@ -1,124 +1,57 @@
 const Room = require("../model/Room");
-const Quiz = require("../model/Quiz");
+exports.createBattleRoom = async (
+    userId,
+    roomName,
+    roomType,
+    maxPlayers,
+    timerMode,
+    battleTime
+) => {
+    if (!roomName?.trim()) {
+        throw new Error("Room name is required.");
+    }
 
-/*
-====================================
-Create Practice Room
-====================================
-*/
+    if (!["Private", "Public"].includes(roomType)) {
+        throw new Error("Invalid room type.");
+    }
 
-exports.createPracticeRoom = async (userId, quizId) => {
+    if (![2, 3, 4, 5, 6, 8].includes(Number(maxPlayers))) {
+        throw new Error("Invalid maximum player count.");
+    }
 
-    const quiz = await Quiz.findById(quizId);
+    if (!["QUESTION", "QUIZ"].includes(timerMode)) {
+        throw new Error("Invalid timer mode.");
+    }
 
-    if (!quiz) {
+    const duration = Number(battleTime);
 
-        throw new Error("Quiz not found");
-
+    if (
+        !Number.isFinite(duration) ||
+        duration < 60 ||
+        duration > 10800
+    ) {
+        throw new Error(
+            "Battle time must be between 1 and 180 minutes."
+        );
     }
 
     const room = await Room.create({
-
-        roomName: "Practice Room",
-
-        host: userId,
-
-        quiz: quizId,
-
-        roomType: "Private",
-
-        gameMode: "PRACTICE",
-
-        quizSource: "DATABASE",
-
-        maxPlayers: 1,
-
-        totalQuestions: quiz.questionCount,
-
-        quizDuration: quiz.questionCount * quiz.questionTime,
-
-        players: [
-
-            {
-
-                user: userId,
-
-                isHost: true,
-
-                isReady: true
-
-            }
-
-        ]
-
-    });
-
-    return room;
-
-};
-
-/*
-====================================
-Create Battle Room
-====================================
-*/
-
-exports.createBattleRoom = async (
-
-    userId,
-
-    roomName,
-
-    roomType,
-
-    maxPlayers,
-
-    timerMode,
-
-    battleTime
-
-) => {
-
-    const room = await Room.create({
-
-        roomName,
-
+        roomName: roomName.trim(),
         roomType,
-
         gameMode: "BATTLE",
-
         host: userId,
-
-        maxPlayers,
-
+        maxPlayers: Number(maxPlayers),
         timerMode,
-
-        battleTime,
-
-        remainingTime:
-
-            timerMode === "QUIZ"
-
-                ? battleTime
-
-                : 0,
-
+        battleTime: duration,
+        remainingTime: timerMode === "QUIZ" ? duration : 0,
         players: [
-
             {
-
                 user: userId,
-
                 isHost: true,
-
                 isReady: true
-
             }
-
         ]
-
     });
 
     return room;
-
 };

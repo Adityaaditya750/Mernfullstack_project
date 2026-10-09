@@ -10,6 +10,9 @@ import Home from './pages/public/Home';
 import About from './pages/public/About';
 import Login from './pages/public/Login';
 import Register from './pages/public/Register';
+import ForgotPassword from './pages/public/ForgotPassword';
+import VerifyOtp from './pages/public/VerifyOtp';
+import ResetPassword from './pages/public/ResetPassword';
 import Profile from './pages/user/Profile';
 import QuizLibrary from './pages/user/QuizLibrary';
 import QuizDetail from './pages/user/QuizDetail';
@@ -31,6 +34,9 @@ function App() {
       <Route path="/" element={<MainLayout />}>
         <Route index element={<Home />} />
         <Route path="about" element={<About />} />
+        <Route path="forgot-password" element={<ForgotPassword />} />
+        <Route path="verify-otp" element={<VerifyOtp />} />
+        <Route path="reset-password" element={<ResetPassword />} />
         
         {/* Only accessible if NOT logged in */}
         <Route 

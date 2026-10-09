@@ -1,49 +1,21 @@
-const express = require("express");
 
+const express = require("express");
 const router = express.Router();
 
-const {
-
-createQuestion,
-
-getQuestions,
-
-getAttemptQuestions,
-
-updateQuestion,
-
-deleteQuestion
-
-} = require("../controller/questionController");
+const { protect, adminOnly } = require("../middleware/authMiddleware");
 
 const {
-
-protect,
-
-adminOnly
-
-} = require("../middleware/authMiddleware");
-
-/*
-=====================================
-Admin
-=====================================
-*/
+    createQuestion,
+    getQuestions,
+    getAttemptQuestions,
+    updateQuestion,
+    deleteQuestion,
+} = require("../controller/questioncontroller");
 
 router.post("/create", protect, adminOnly, createQuestion);
-
+router.get("/quiz/:quizId", protect, getQuestions);
+router.get("/attempt/:quizId", protect, getAttemptQuestions);
 router.put("/update/:questionId", protect, adminOnly, updateQuestion);
-
 router.delete("/delete/:questionId", protect, adminOnly, deleteQuestion);
-
-/*
-=====================================
-Users
-=====================================
-*/
-
-router.get("/:quizId", protect, getQuestions);
-
-router.get("/:quizId/attempt", protect, getAttemptQuestions);
 
 module.exports = router;

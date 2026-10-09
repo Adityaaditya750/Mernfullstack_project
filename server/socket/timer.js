@@ -1,91 +1,43 @@
+
 const timers = new Map();
 
-/*
-====================================
-Start Timer
-====================================
-*/
+exports.startTimer = (io, roomCode, duration, onFinish) => {
+  // Prevent duplicate intervals for this room.
+  exports.stopTimer(roomCode);
 
-exports.startTimer = (
+  let timeLeft = Math.max(0, Math.floor(Number(duration) || 0));
 
-    io,
+  const emitTime = () => {
+    io.to(roomCode).emit("timer", { timeLeft });
+  };
 
-    roomCode,
+  emitTime();
 
-    duration,
+  if (timeLeft <= 0) {
+    io.to(roomCode).emit("timer-ended");
+    onFinish?.();
+    return;
+  }
 
-    onFinish
+  const interval = setInterval(() => {
+    timeLeft -= 1;
+    emitTime();
 
-) => {
+    if (timeLeft <= 0) {
+      exports.stopTimer(roomCode);
+      io.to(roomCode).emit("timer-ended");
+      onFinish?.();
+    }
+  }, 1000);
 
-    let timeLeft = duration;
-
-    io.to(roomCode).emit(
-
-        "timer",
-
-        {
-
-            timeLeft
-
-        }
-
-    );
-
-    const interval = setInterval(() => {
-
-        timeLeft--;
-
-        io.to(roomCode).emit(
-
-            "timer",
-
-            {
-
-                timeLeft
-
-            }
-
-        );
-
-        if (timeLeft <= 0) {
-
-            clearInterval(interval);
-
-            timers.delete(roomCode);
-
-            onFinish();
-
-        }
-
-    }, 1000);
-
-    timers.set(
-
-        roomCode,
-
-        interval
-
-    );
-
+  timers.set(roomCode, interval);
 };
 
-/*
-====================================
-Stop Timer
-====================================
-*/
-
 exports.stopTimer = (roomCode) => {
+  const interval = timers.get(roomCode);
 
-    const interval = timers.get(roomCode);
-
-    if (interval) {
-
-        clearInterval(interval);
-
-        timers.delete(roomCode);
-
-    }
-
+  if (interval) {
+    clearInterval(interval);
+    timers.delete(roomCode);
+  }
 };

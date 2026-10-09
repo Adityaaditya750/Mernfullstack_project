@@ -54,7 +54,13 @@ export const apiRequest = async (path, options = {}) => {
     if (response.status === 401 && !path.startsWith('/auth/')) {
       window.dispatchEvent(new Event('quizarena:unauthorized'));
     }
-    throw new Error(getErrorMessage(data));
+    const error = new Error(getErrorMessage(data));
+    if (data && typeof data === 'object') {
+      error.code = data.code;
+      error.identifier = data.identifier;
+      error.purpose = data.purpose;
+    }
+    throw error;
   }
 
   return data;

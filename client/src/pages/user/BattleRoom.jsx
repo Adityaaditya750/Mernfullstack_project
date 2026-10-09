@@ -4,6 +4,7 @@ import { ArrowLeft, Check, Copy, Crown, LoaderCircle, Sparkles, Users, X } from 
 import { useAuth } from '../../context/AuthContext';
 import { apiRequest, jsonBody } from '../../lib/api';
 import { LoadingState, Notice, PageFrame } from '../../components/PageFrame';
+import socket from '../../socket';
 
 const idOf = (entity) => (typeof entity === 'string' ? entity : entity?._id);
 
@@ -37,6 +38,7 @@ const BattleRoom = () => {
   const [aiQuiz, setAiQuiz] = useState(initialAiQuiz);
   const [showAiQuizModal, setShowAiQuizModal] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+  const [timeLeft, setTimeLeft] = useState(null);
 
   const isHost = idOf(room?.host) === user?._id;
   const currentPlayer = room?.players?.find((player) => idOf(player.user) === user?._id);
@@ -63,20 +65,18 @@ const BattleRoom = () => {
       const roomData = await apiRequest(`/room/${roomId}`);
       setRoom(roomData);
 
-      if (roomData.status === 'Started') {
-        if (roomData.myResponseId && roomData.quiz) {
-          navigate(`/quiz/${idOf(roomData.quiz)}/attempt/${roomData.myResponseId}`, {
-            replace: true,
-            state: { roomId },
-          });
-          return;
-        }
-        const current = await apiRequest(`/room/${roomId}/current-question`);
-        setQuestion(current);
-        setSelectedQuiz(idOf(roomData.quiz) || '');
-      } else {
-        setQuestion(null);
-      }
+      
+if (roomData.status === 'Started') {
+  const current = await apiRequest(
+    `/room/${roomId}/current-question`
+  );
+
+  setQuestion(current);
+  setSelectedQuiz(idOf(roomData.quiz) || '');
+} else {
+  setQuestion(null);
+}
+
 
       if (roomData.status === 'Completed') {
         const data = await apiRequest(`/room/${roomId}/leaderboard`);
@@ -96,6 +96,69 @@ const BattleRoom = () => {
     const timer = window.setInterval(() => loadRoom(false), 4000);
     return () => window.clearInterval(timer);
   }, [loadRoom, pollKey]);
+
+
+  
+useEffect(() => {
+  const token = localStorage.getItem('token');
+
+  if (!token || !room?.roomCode) {
+    return undefined;
+  }
+
+  socket.auth = { token };
+
+  const joinRoom = () => {
+    socket.emit('join-room', {
+      roomCode: room.roomCode,
+    });
+  };
+
+  const refreshRoom = () => {
+    loadRoom(false);
+  };
+
+  const handleTimer = ({ timeLeft: remaining }) => {
+    const value = Number(remaining);
+
+    if (Number.isFinite(value)) {
+      setTimeLeft(Math.max(0, value));
+    }
+  };
+
+  const handleLeaderboard = () => {
+    loadRoom(false);
+  };
+
+  if (!socket.connected) {
+    socket.connect();
+  }
+
+  socket.on('connect', joinRoom);
+  socket.on('room-updated', refreshRoom);
+  socket.on('battle-started', refreshRoom);
+  socket.on('next-question', refreshRoom);
+  socket.on('timer', handleTimer);
+  socket.on('timer-ended', refreshRoom);
+  socket.on('leaderboard-updated', handleLeaderboard);
+  socket.on('battle-ended', refreshRoom);
+
+  if (socket.connected) {
+    joinRoom();
+  }
+
+  return () => {
+    socket.off('connect', joinRoom);
+    socket.off('room-updated', refreshRoom);
+    socket.off('battle-started', refreshRoom);
+    socket.off('next-question', refreshRoom);
+    socket.off('timer', handleTimer);
+    socket.off('timer-ended', refreshRoom);
+    socket.off('leaderboard-updated', handleLeaderboard);
+    socket.off('battle-ended', refreshRoom);
+  };
+}, [room?.roomCode, loadRoom]);
+
 
   useEffect(() => {
     let active = true;
@@ -343,6 +406,20 @@ const BattleRoom = () => {
               <aside className="h-fit rounded-2xl border border-slate-200 bg-white p-5">
                 <h2 className="font-bold text-[#063b49]">Battle status</h2>
                 <p className="mt-2 text-sm text-slate-600">Answers are scored by the existing battle service. Coding and written answers may be pending evaluation.</p>
+                
+{timeLeft !== null && (
+  <div className="mt-4 rounded-xl bg-emerald-50 p-4">
+    <p className="text-xs font-semibold uppercase tracking-wide text-emerald-800">
+      Time remaining
+    </p>
+
+    <p className="mt-1 font-mono text-3xl font-extrabold text-[#063b49]">
+      {String(Math.floor(timeLeft / 60)).padStart(2, '0')}:
+      {String(timeLeft % 60).padStart(2, '0')}
+    </p>
+  </div>
+)}
+
                 <h3 className="mt-5 text-sm font-semibold text-slate-700">Scores</h3>
                 <ol className="mt-2 space-y-2">
                   {[...playerAnswers].sort((a, b) => (b.score || 0) - (a.score || 0)).map((player, index) => <li key={idOf(player.user) || index} className="flex justify-between gap-3 text-sm"><span className="truncate">{player.user?.name || 'Player'}</span><span className="font-bold">{player.score || 0}</span></li>)}

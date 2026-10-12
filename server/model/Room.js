@@ -31,6 +31,20 @@ const playerSchema = new mongoose.Schema(
             min: 0,
         },
 
+                // Total time spent answering questions, in milliseconds.
+        totalAnswerTime: {
+            type: Number,
+            default: 0,
+            min: 0,
+        },
+
+        // Number of questions answered by this player.
+        answeredQuestions: {
+            type: Number,
+            default: 0,
+            min: 0,
+        },
+
         isReady: {
             type: Boolean,
             default: false,

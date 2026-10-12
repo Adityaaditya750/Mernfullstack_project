@@ -11,9 +11,11 @@ const {
     selectQuiz,
     nextQuestion,
     submitBattleAnswer,
+    submitBattleAttempt,
     endBattle,
     getLeaderboard,
     getCurrentQuestion,
+    getBattleQuestions,
     getPublicRooms,
     removePlayer,
 } = require("../controller/roomController");
@@ -32,9 +34,11 @@ const handlers = {
     selectQuiz,
     nextQuestion,
     submitBattleAnswer,
+    submitBattleAttempt,
     endBattle,
     getLeaderboard,
     getCurrentQuestion,
+    getBattleQuestions,
     getPublicRooms,
     removePlayer,
 };
@@ -67,10 +71,12 @@ router.put("/:roomId/start", protect, startRoom);
 router.put("/:roomId/select-quiz", protect, selectQuiz);
 router.put("/:roomId/next-question", protect, nextQuestion);
 router.post("/submit-answer", protect, submitBattleAnswer);
+router.post("/submit-attempt", protect, submitBattleAttempt);
 router.put("/:roomId/end", protect, endBattle);
 
 // Results
 router.get("/:roomId/leaderboard", protect, getLeaderboard);
 router.get("/:roomId/current-question", protect, getCurrentQuestion);
+router.get("/:roomId/questions", protect, getBattleQuestions);
 
 module.exports = router;

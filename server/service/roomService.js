@@ -28,7 +28,7 @@ exports.createBattleRoom = async (
     if (
         !Number.isFinite(duration) ||
         duration < 60 ||
-        duration > 10800
+        duration >  180 * 60
     ) {
         throw new Error(
             "Battle time must be between 1 and 180 minutes."

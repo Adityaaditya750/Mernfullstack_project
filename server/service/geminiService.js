@@ -202,7 +202,7 @@ Generate completely new questions based on the requested topic and difficulty wh
 
     const response = await ai.models.generateContent({
 
-        model: "gemini-2.5-flash",
+        model: "gemini-3.8-flash",
 
         contents: prompt
 

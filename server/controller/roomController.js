@@ -1,6 +1,7 @@
 const Room = require("../model/Room");
 const Quiz = require("../model/Quiz");
 const Question = require("../model/Question");
+const Response = require("../model/Response");
 const mongoose = require("mongoose");
 
 const {
@@ -26,21 +27,21 @@ exports.createRoom = async (req, res) => {
 
         const {
 
-    gameMode,
+            gameMode,
 
-    quizId,
+            quizId,
 
-    roomName,
+            roomName,
 
-    roomType,
+            roomType,
 
-    maxPlayers,
+            maxPlayers,
 
-    timerMode,
+            timerMode,
 
-    battleTime
+            battleTime
 
-} = req.body;
+        } = req.body;
 
         let room;
 
@@ -72,19 +73,19 @@ exports.createRoom = async (req, res) => {
 
             room = await createBattleRoom(
 
-    req.user._id,
+                req.user._id,
 
-    roomName,
+                roomName,
 
-    roomType,
+                roomType,
 
-    maxPlayers,
+                maxPlayers,
 
-    timerMode,
+                timerMode,
 
-    battleTime
+                battleTime
 
-);
+            );
 
         }
 
@@ -99,13 +100,13 @@ exports.createRoom = async (req, res) => {
     }
 
     catch (error) {
-    console.error("CREATE ROOM ERROR:", error.stack);
+        console.error("CREATE ROOM ERROR:", error.stack);
 
-    return res.status(500).json({
-        success: false,
-        message: error.message,
-    });
-}
+        return res.status(500).json({
+            success: false,
+            message: error.message,
+        });
+    }
 
 };
 
@@ -114,6 +115,7 @@ exports.createRoom = async (req, res) => {
 Join Room
 ====================================
 */
+
 
 
 exports.joinRoom = async (req, res) => {
@@ -128,7 +130,7 @@ exports.joinRoom = async (req, res) => {
         }
 
         const room = await Room.findOne({
-            roomCode: String(roomCode).trim(),
+            roomCode: String(roomCode).trim().toUpperCase(),
         });
 
         if (!room) {
@@ -138,6 +140,7 @@ exports.joinRoom = async (req, res) => {
             });
         }
 
+        // Only waiting battle rooms can accept new players.
         if (
             room.gameMode !== "BATTLE" ||
             room.status !== "Waiting" ||
@@ -155,14 +158,16 @@ exports.joinRoom = async (req, res) => {
             (player) => player.user.toString() === userId
         );
 
-        if (existingPlayer) {
-            if (existingPlayer.isRemoved) {
-                return res.status(403).json({
-                    success: false,
-                    message: "You were removed from this room and cannot rejoin.",
-                });
-            }
+        // Prevent removed players from rejoining.
+        if (existingPlayer?.isRemoved) {
+            return res.status(403).json({
+                success: false,
+                message: "You were removed from this room and cannot rejoin.",
+            });
+        }
 
+        // Prevent duplicate membership.
+        if (existingPlayer) {
             return res.status(200).json({
                 success: true,
                 alreadyJoined: true,
@@ -171,13 +176,9 @@ exports.joinRoom = async (req, res) => {
             });
         }
 
-        if (room.roomType === "Private") {
-            return res.status(403).json({
-                success: false,
-                message: "This is a private room. Join using a valid invitation or access code.",
-            });
-        }
-
+        // A room code is required for both public and private rooms.
+        // Private rooms are allowed here because the user supplied
+        // the matching room code.
         const activePlayers = room.players.filter(
             (player) => !player.isRemoved
         );
@@ -212,6 +213,7 @@ exports.joinRoom = async (req, res) => {
         });
     }
 };
+
 
 
 /*
@@ -451,7 +453,7 @@ exports.toggleReady = async (req, res) => {
 };
 
 
-  /*
+/*
 ====================================
 Start Room
 ====================================
@@ -498,17 +500,6 @@ exports.startRoom = async (req, res) => {
             return res.status(400).json({
                 success: false,
                 message: "At least two active players are required.",
-            });
-        }
-
-        const notReady = activePlayers.find(
-            (player) => !player.isReady
-        );
-
-        if (notReady) {
-            return res.status(400).json({
-                success: false,
-                message: "All active players must be ready.",
             });
         }
 
@@ -903,8 +894,8 @@ exports.submitBattleAnswer = async (req, res) => {
             questionType: question.questionType,
             selectedOption:
                 Number.isInteger(Number(selectedOption)) &&
-                selectedOption !== undefined &&
-                selectedOption !== null
+                    selectedOption !== undefined &&
+                    selectedOption !== null
                     ? Number(selectedOption)
                     : null,
             codingAnswer: codingAnswer || "",
@@ -945,7 +936,26 @@ exports.submitBattleAnswer = async (req, res) => {
 
         // Derive the room score from the saved response rather than
         // incrementing it independently for every request.
-        player.score = response.obtainedMarks;
+        // Derive the score from the saved response.
+        player.score = Number(response.obtainedMarks) || 0;
+
+        // Accumulate answer time in milliseconds.
+        // Assumes the frontend sends timeTaken in seconds.
+        const submittedTimeSeconds = Number(timeTaken);
+
+        const validTimeSeconds =
+            Number.isFinite(submittedTimeSeconds) &&
+                submittedTimeSeconds >= 0
+                ? submittedTimeSeconds
+                : 0;
+
+        player.totalAnswerTime =
+            Number(player.totalAnswerTime || 0) +
+            validTimeSeconds * 1000;
+
+        player.answeredQuestions =
+            Number(player.answeredQuestions || 0) + 1;
+
         await room.save();
 
         return res.status(200).json({
@@ -964,6 +974,354 @@ exports.submitBattleAnswer = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: error.message || "Could not submit your answer."
+        });
+    }
+};
+
+exports.getBattleQuestions = async (req, res) => {
+    try {
+        const { roomId } = req.params;
+        const room = await Room.findById(roomId);
+
+        if (!room) {
+            return res.status(404).json({
+                success: false,
+                message: "Room not found.",
+            });
+        }
+
+        const player = room.players.find(
+            (entry) =>
+                entry.user.toString() === req.user._id.toString()
+        );
+
+        if (!player || player.isRemoved) {
+            return res.status(403).json({
+                success: false,
+                message: "You are not an active player in this room.",
+            });
+        }
+
+        if (room.status !== "Started" || !room.isQuizStarted) {
+            return res.status(400).json({
+                success: false,
+                message: "The battle is not active.",
+            });
+        }
+
+        if (!room.quizEndTime || Date.now() >= room.quizEndTime.getTime()) {
+            await endBattleService(room._id);
+            return res.status(410).json({
+                success: false,
+                message: "Battle time has expired.",
+            });
+        }
+
+        const questionIds = room.questionOrder || [];
+        const questionQuery = questionIds.length
+            ? { _id: { $in: questionIds }, quiz: room.quiz }
+            : { quiz: room.quiz };
+
+        const questionDocuments = await Question.find(questionQuery)
+            .select(
+                "_id questionType question options image marks coding.language coding.starterCode longAnswer.minimumWords"
+            )
+            .sort({ createdAt: 1, _id: 1 });
+
+        const questionsById = new Map(
+            questionDocuments.map((question) => [
+                question._id.toString(),
+                question,
+            ])
+        );
+        const orderedQuestions = questionIds.length
+            ? questionIds
+                .map((id) => questionsById.get(id.toString()))
+                .filter(Boolean)
+            : questionDocuments;
+
+        if (!orderedQuestions.length) {
+            return res.status(404).json({
+                success: false,
+                message: "No questions were found for this battle.",
+            });
+        }
+
+        const response = player.responseId
+            ? await Response.findById(player.responseId).select("submitted")
+            : null;
+
+        return res.status(200).json({
+            success: true,
+            questions: orderedQuestions,
+            totalQuestions: orderedQuestions.length,
+            remainingTime: Math.max(
+                0,
+                Math.ceil((room.quizEndTime.getTime() - Date.now()) / 1000)
+            ),
+            serverTime: Date.now(),
+            submitted: Boolean(response?.submitted),
+        });
+    } catch (error) {
+        console.error("getBattleQuestions error:", error);
+        return res.status(500).json({
+            success: false,
+            message: error.message || "Could not load battle questions.",
+        });
+    }
+};
+
+exports.submitBattleAttempt = async (req, res) => {
+    try {
+        const { roomId, answers } = req.body;
+
+        if (!roomId || !Array.isArray(answers)) {
+            return res.status(400).json({
+                success: false,
+                message: "Room ID and an answers array are required.",
+            });
+        }
+
+        const room = await Room.findById(roomId);
+        if (!room) {
+            return res.status(404).json({
+                success: false,
+                message: "Room not found.",
+            });
+        }
+
+        if (
+            room.status !== "Started" ||
+            !room.isQuizStarted ||
+            room.isQuizEnded
+        ) {
+            return res.status(400).json({
+                success: false,
+                message: "This battle is not accepting submissions.",
+            });
+        }
+
+        if (!room.quizEndTime || Date.now() >= room.quizEndTime.getTime()) {
+            await endBattleService(room._id);
+            return res.status(400).json({
+                success: false,
+                message: "The battle time has expired.",
+            });
+        }
+
+        const player = room.players.find(
+            (entry) =>
+                entry.user.toString() === req.user._id.toString()
+        );
+
+        if (!player || player.isRemoved || !player.responseId) {
+            return res.status(403).json({
+                success: false,
+                message: "You are not an active player in this battle.",
+            });
+        }
+
+        const response = await Response.findById(player.responseId);
+        if (!response) {
+            return res.status(404).json({
+                success: false,
+                message: "Battle response not found.",
+            });
+        }
+
+        if (response.submitted) {
+            return res.status(409).json({
+                success: false,
+                message: "Your answers have already been submitted.",
+            });
+        }
+
+        const questionIds = (room.questionOrder || []).map((id) =>
+            id.toString()
+        );
+        if (
+            answers.length !== questionIds.length ||
+            new Set(answers.map((answer) => String(answer.questionId))).size !==
+            questionIds.length ||
+            answers.some(
+                (answer) => !questionIds.includes(String(answer.questionId))
+            )
+        ) {
+            return res.status(400).json({
+                success: false,
+                message: "Submit one answer entry for every battle question.",
+            });
+        }
+
+        const questions = await Question.find({
+            _id: { $in: room.questionOrder },
+            quiz: room.quiz,
+        }).select(
+            "_id questionType marks options correctAnswerIndex +fillBlank.answer +trueFalse.answer +longAnswer.expectedAnswer"
+        );
+        const questionsById = new Map(
+            questions.map((question) => [
+                question._id.toString(),
+                question,
+            ])
+        );
+        const answerByQuestionId = new Map(
+            answers.map((answer) => [
+                String(answer.questionId),
+                answer,
+            ])
+        );
+        const savedAnswers = [];
+
+        for (const questionId of questionIds) {
+            const question = questionsById.get(questionId);
+            const submittedAnswer = answerByQuestionId.get(questionId);
+
+            if (!question || !submittedAnswer) {
+                return res.status(400).json({
+                    success: false,
+                    message: "A battle question or answer is missing.",
+                });
+            }
+
+            const selectedOption =
+                submittedAnswer.selectedOption === null ||
+                    submittedAnswer.selectedOption === undefined ||
+                    submittedAnswer.selectedOption === ""
+                    ? null
+                    : Number(submittedAnswer.selectedOption);
+            const fillBlankAnswer = String(
+                submittedAnswer.fillBlankAnswer || ""
+            ).trim();
+            const trueFalseAnswer =
+                typeof submittedAnswer.trueFalseAnswer === "boolean"
+                    ? submittedAnswer.trueFalseAnswer
+                    : null;
+            const longAnswer = String(
+                submittedAnswer.longAnswer || ""
+            ).trim();
+            const codingAnswer = String(
+                submittedAnswer.codingAnswer || ""
+            );
+
+            const attempted =
+                (["MCQ", "IMAGE"].includes(question.questionType) &&
+                    Number.isInteger(selectedOption)) ||
+                (question.questionType === "TRUE_FALSE" &&
+                    trueFalseAnswer !== null) ||
+                (question.questionType === "FILL" && fillBlankAnswer !== "") ||
+                (question.questionType === "LONG" && longAnswer !== "") ||
+                (question.questionType === "CODING" && codingAnswer.trim() !== "");
+
+            if (!attempted) continue;
+
+            let isCorrect = false;
+            if (["MCQ", "IMAGE"].includes(question.questionType)) {
+                isCorrect =
+                    selectedOption >= 0 &&
+                    selectedOption < question.options.length &&
+                    selectedOption === question.correctAnswerIndex;
+            } else if (question.questionType === "TRUE_FALSE") {
+                isCorrect = trueFalseAnswer === question.trueFalse?.answer;
+            } else if (question.questionType === "FILL") {
+                isCorrect =
+                    fillBlankAnswer.toLowerCase() ===
+                    String(question.fillBlank?.answer || "")
+                        .trim()
+                        .toLowerCase();
+            }
+
+            const obtainedMarks =
+                isCorrect && !["CODING", "LONG"].includes(question.questionType)
+                    ? Number(question.marks) || 0
+                    : 0;
+
+            savedAnswers.push({
+                question: question._id,
+                questionType: question.questionType,
+                selectedOption,
+                codingAnswer,
+                codingLanguage: String(
+                    submittedAnswer.codingLanguage || ""
+                ),
+                longAnswer,
+                fillBlankAnswer,
+                trueFalseAnswer,
+                obtainedMarks,
+                maxMarks: Number(question.marks) || 0,
+                isCorrect,
+                evaluatedByAI: false,
+                aiFeedback: "",
+            });
+        }
+
+        const now = new Date();
+        const obtainedMarks = savedAnswers.reduce(
+            (total, answer) => total + answer.obtainedMarks,
+            0
+        );
+        response.answers = savedAnswers;
+        response.attemptedQuestions = savedAnswers.length;
+        response.skippedQuestions = Math.max(
+            0,
+            questionIds.length - savedAnswers.length
+        );
+        response.correctAnswers = savedAnswers.filter(
+            (answer) => answer.isCorrect
+        ).length;
+        response.wrongAnswers =
+            response.attemptedQuestions - response.correctAnswers;
+        response.obtainedMarks = obtainedMarks;
+        response.percentage =
+            Number(response.totalMarks) > 0
+                ? Number(
+                    (
+                        (obtainedMarks / Number(response.totalMarks)) *
+                        100
+                    ).toFixed(2)
+                )
+                : 0;
+        response.submitted = true;
+        response.autoSubmitted = false;
+        response.submittedAt = now;
+        response.timeTaken = Math.max(
+            0,
+            Math.floor((now.getTime() - new Date(response.startedAt).getTime()) / 1000)
+        );
+        await response.save();
+
+        player.score = obtainedMarks;
+        await room.save();
+
+        const activePlayers = room.players.filter(
+            (entry) => !entry.isRemoved
+        );
+        const playerResponses = await Response.find({
+            room: room._id,
+            user: { $in: activePlayers.map((entry) => entry.user) },
+        }).select("user submitted");
+        const allPlayersSubmitted =
+            playerResponses.length === activePlayers.length &&
+            playerResponses.every((entry) => entry.submitted);
+
+        if (allPlayersSubmitted) {
+            await endBattleService(room._id);
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: allPlayersSubmitted
+                ? "All players have submitted. The results are ready."
+                : "Your answers are submitted. Waiting for the other players.",
+            submitted: true,
+            allPlayersSubmitted,
+            score: obtainedMarks,
+        });
+    } catch (error) {
+        console.error("submitBattleAttempt error:", error);
+        return res.status(500).json({
+            success: false,
+            message: error.message || "Could not submit your battle answers.",
         });
     }
 };
@@ -1015,9 +1373,10 @@ exports.endBattle = async (req, res) => {
         }
 
         // Exclude removed players and sort by final score
-        const leaderboard = updatedRoom.players
+        const leaderboard = room.players
             .filter((player) => !player.isRemoved && player.user)
             .sort((a, b) => {
+                // 1. Higher score ranks first.
                 const scoreDifference =
                     Number(b.score || 0) - Number(a.score || 0);
 
@@ -1025,7 +1384,16 @@ exports.endBattle = async (req, res) => {
                     return scoreDifference;
                 }
 
-                // Consistent ordering for tied scores
+                // 2. For tied scores, lower answer time ranks first.
+                const timeDifference =
+                    Number(a.totalAnswerTime || 0) -
+                    Number(b.totalAnswerTime || 0);
+
+                if (timeDifference !== 0) {
+                    return timeDifference;
+                }
+
+                // 3. If score and time are equal, earlier join ranks first.
                 return (
                     new Date(a.joinedAt || 0).getTime() -
                     new Date(b.joinedAt || 0).getTime()
@@ -1035,6 +1403,8 @@ exports.endBattle = async (req, res) => {
                 rank: index + 1,
                 user: player.user,
                 score: Number(player.score || 0),
+                totalAnswerTime: Number(player.totalAnswerTime || 0),
+                answeredQuestions: Number(player.answeredQuestions || 0),
                 isHost: player.isHost,
             }));
 

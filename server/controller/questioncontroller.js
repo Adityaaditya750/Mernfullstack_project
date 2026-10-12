@@ -19,7 +19,8 @@ const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
 const sameId = (a, b) =>
     Boolean(a && b && a.toString() === b.toString());
 
-const isAdmin = (req) => req.user?.role === "admin";
+const isAdmin = (user) =>
+    String(user?.role || "").trim().toLowerCase() === "admin";
 
 const isQuizOwner = (quiz, user) =>
     sameId(quiz.createdBy, user?._id);
@@ -81,6 +82,7 @@ const getQuizForAdmin = async (quizId, user) => {
         return { error: "Quiz not found.", status: 404 };
     }
 
+    // Only admins can manage quiz questions.
     if (!isAdmin(user)) {
         return {
             error: "Only admins can manage quiz questions.",
@@ -88,6 +90,7 @@ const getQuizForAdmin = async (quizId, user) => {
         };
     }
 
+    // Only the quiz owner can manage its questions.
     if (!isQuizOwner(quiz, user)) {
         return {
             error: "You can manage questions only for quizzes you created.",
@@ -95,6 +98,7 @@ const getQuizForAdmin = async (quizId, user) => {
         };
     }
 
+    // Temporary AI quizzes are managed by the battle system.
     if (quiz.isTemporary) {
         return {
             error: "Temporary AI quiz questions are managed by the battle system.",
@@ -134,6 +138,12 @@ const createQuestion = async (req, res) => {
             });
         }
 
+
+
+        console.log("Logged-in user:", req.user?._id);
+        console.log("Logged-in email:", req.user?.email);
+        console.log("Logged-in role:", req.user?.role);
+        console.log("Quiz ID:", quizId);
         const result = await getQuizForAdmin(quizId, req.user);
 
         if (result.error) {

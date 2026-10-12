@@ -22,6 +22,7 @@ import QuizHistory from './pages/user/QuizHistory';
 import BattleLobby from './pages/user/BattleLobby';
 import BattleRoom from './pages/user/BattleRoom';
 import AdminDashboard from './pages/admin/AdminDashboard';
+import CreateBattle from './pages/user/CreateBattle';
 
 // Route Guards
 import ProtectedRoute from './route/ProtectedRoute';
@@ -72,6 +73,7 @@ function App() {
         <Route path="results/:responseId" element={<ProtectedRoute><QuizResult /></ProtectedRoute>} />
         <Route path="my-results" element={<ProtectedRoute><QuizHistory /></ProtectedRoute>} />
         <Route path="battle" element={<ProtectedRoute><BattleLobby /></ProtectedRoute>} />
+        <Route path="battle/create" element={<ProtectedRoute><CreateBattle /></ProtectedRoute>} />
         <Route path="battle/:roomId" element={<ProtectedRoute><BattleRoom /></ProtectedRoute>} />
       </Route>
 

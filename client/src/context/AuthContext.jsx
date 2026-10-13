@@ -152,6 +152,7 @@ export const AuthProvider = ({ children }) => {
 
   const register = async (
     name,
+    username,
     email,
     phone,
     password,
@@ -163,6 +164,7 @@ export const AuthProvider = ({ children }) => {
         method: 'POST',
         body: jsonBody({
           name,
+          username,
           email,
           phone,
           password,

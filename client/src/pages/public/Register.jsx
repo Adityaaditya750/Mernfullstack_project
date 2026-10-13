@@ -42,6 +42,7 @@ const Register = () => {
   const formik = useFormik({
     initialValues: {
       name: '',
+      username: '',
       email: '',
       phone: '',
       password: '',
@@ -59,6 +60,7 @@ const Register = () => {
 
       const result = await register(
         values.name.trim(),
+        values.username.trim(),
         values.email.trim(),
         values.phone.trim(),
         values.password,
@@ -237,6 +239,47 @@ const Register = () => {
                   {fieldError('name') && (
                     <p className="mt-1.5 text-xs text-red-600">
                       {formik.errors.name}
+                    </p>
+                  )}
+                </div>
+
+                {/* Username */}
+
+                <div>
+                  <label
+                    htmlFor="username"
+                    className="mb-2 block text-sm font-semibold text-slate-700"
+                  >
+                    Username
+                  </label>
+
+                  <div className="relative">
+                    <UserPlus className="absolute left-3.5 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-slate-400" />
+
+                    <Input
+                      id="username"
+                      name="username"
+                      type="text"
+                      placeholder="Choose a username"
+                      autoComplete="username"
+                      maxLength={20}
+                      spellCheck={false}
+                      value={formik.values.username}
+                      onChange={formik.handleChange}
+                      onBlur={formik.handleBlur}
+                      disabled={formik.isSubmitting}
+                      aria-invalid={Boolean(fieldError('username'))}
+                      className={`${inputClass('username')} pl-10`}
+                    />
+                  </div>
+
+                  {fieldError('username') ? (
+                    <p className="mt-1.5 text-xs text-red-600">
+                      {formik.errors.username}
+                    </p>
+                  ) : (
+                    <p className="mt-1 text-xs text-slate-400">
+                      3–20 characters; letters, numbers, and underscores only.
                     </p>
                   )}
                 </div>

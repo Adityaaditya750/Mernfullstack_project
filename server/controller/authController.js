@@ -215,6 +215,7 @@ const registerUser = async (req, res) => {
   try {
     const {
       name,
+      username,
       email,
       phone,
       password,
@@ -307,10 +308,35 @@ const registerUser = async (req, res) => {
       }
     }
 
+
+    const normalizedUsername = String(username || "")
+  .trim()
+  .toLowerCase();
+
+if (!/^[a-z0-9_]{3,20}$/.test(normalizedUsername)) {
+  return res.status(400).json({
+    success: false,
+    message:
+      "Username must be 3–20 characters and contain only letters, numbers, and underscores.",
+  });
+}
+
+const existingUsername = await User.findOne({
+  username: normalizedUsername,
+});
+
+if (existingUsername) {
+  return res.status(409).json({
+    success: false,
+    message: "This username is already taken.",
+  });
+}
+
     const hashedPassword = await bcrypt.hash(password, 12);
 
     const user = await User.create({
       name: name.trim(),
+      username: normalizedUsername,
       email: normalizedEmail,
       ...(normalizedPhone ? { phone: normalizedPhone } : {}),
       password: hashedPassword,

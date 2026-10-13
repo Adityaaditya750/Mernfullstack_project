@@ -14,6 +14,14 @@ export const registerSchema = Yup.object({
     .max(60, "Name cannot exceed 60 characters.")
     .required("Full name is required."),
 
+  username: Yup.string()
+    .trim()
+    .matches(
+      /^[a-z0-9_]{3,20}$/i,
+      "Username must be 3–20 characters and contain only letters, numbers, and underscores."
+    )
+    .required("Username is required."),
+
   email: Yup.string()
     .trim()
     .email("Enter a valid email address.")

@@ -509,10 +509,10 @@ Leave Room
 */
 
 
+
 exports.leaveRoom = async (req, res) => {
     try {
         const { roomId } = req.params;
-        const userId = req.user._id.toString();
 
         if (!mongoose.Types.ObjectId.isValid(roomId)) {
             return res.status(400).json({
@@ -530,10 +530,12 @@ exports.leaveRoom = async (req, res) => {
             });
         }
 
-        const isHost = room.host.toString() === userId;
+        const userId = String(req.user._id);
+        const hostId = String(room.host);
+        const isHost = hostId === userId;
 
-        const player = room.players.find(
-            (entry) => entry.user.toString() === userId
+        const player = (room.players || []).find(
+            (entry) => String(entry.user) === userId
         );
 
         if (!isHost && (!player || player.isRemoved)) {
@@ -545,112 +547,79 @@ exports.leaveRoom = async (req, res) => {
 
         const io = req.app.get("io");
 
-        // BEFORE the battle starts:
-        // Host leaving closes the waiting room for everyone.
-        if (
+        // Only close/delete the room if the host leaves
+        // before the battle starts.
+        const isWaitingRoom =
             room.status === "Waiting" &&
             !room.isQuizStarted &&
-            !room.isQuizEnded
-        ) {
-            if (isHost) {
-                const roomCode = room.roomCode;
-                const deletedRoomId = room._id.toString();
+            !room.isQuizEnded;
 
-                await Room.findByIdAndDelete(room._id);
+        if (isWaitingRoom && isHost) {
+            const deletedRoomId = String(room._id);
+            const roomCode = room.roomCode;
 
-                if (io && roomCode) {
+            await Room.findByIdAndDelete(room._id);
+
+            if (io) {
+                if (roomCode) {
                     io.to(roomCode).emit("room-closed", {
                         roomId: deletedRoomId,
-                        message: "The host closed the waiting room.",
-                    });
-
-                    io.emit("public-battles-updated", {
-                        roomId: deletedRoomId,
-                        roomCode,
-                        status: "Closed",
+                        message:
+                            "The host left. This waiting room has been closed.",
                     });
                 }
 
-                return res.status(200).json({
-                    success: true,
-                    roomDeleted: true,
-                    message: "Waiting room closed successfully.",
+                io.emit("public-battles-updated", {
+                    roomId: deletedRoomId,
+                    status: "Closed",
                 });
-            }
-
-            player.isRemoved = true;
-            player.isReady = false;
-            player.removedAt = new Date();
-            player.removedBy = req.user._id;
-
-            await room.save();
-
-            if (io && room.roomCode) {
-                io.to(room.roomCode).emit("player-left", {
-                    roomId: room._id.toString(),
-                    playerId: userId,
-                });
-
-                emitRoomUpdated(io, room);
-                emitPublicBattlesUpdated(io, room);
             }
 
             return res.status(200).json({
                 success: true,
-                roomDeleted: false,
-                message: "You left the waiting room.",
+                roomDeleted: true,
+                message: "Waiting room closed successfully.",
             });
         }
 
-        // AFTER the battle starts:
-        // Finalize this player's response, but do not end or delete the room.
-        if (room.isQuizStarted && !room.isQuizEnded) {
-            await finalizePlayerResponse(room, player);
-
-            if (player) {
-                player.isRemoved = true;
-                player.isReady = false;
-                player.removedAt = new Date();
-                player.removedBy = req.user._id;
-            }
-
-            await room.save();
-
-            if (io && room.roomCode) {
-                io.to(room.roomCode).emit("player-left", {
-                    roomId: room._id.toString(),
-                    playerId: userId,
-                    isHost,
-                    message: isHost
-                        ? "The host left the battle. The battle continues."
-                        : "A player left the battle.",
-                });
-
-                emitRoomUpdated(io, room);
-                emitPublicBattlesUpdated(io, room);
-            }
-
-            return res.status(200).json({
-                success: true,
-                roomDeleted: false,
-                battleContinues: true,
+        // Don't delete a started or completed battle.
+        if (!isWaitingRoom) {
+            return res.status(400).json({
+                success: false,
                 message:
-                    "Your response has been finalized. The battle continues for the other players.",
+                    "This endpoint only handles leaving a waiting room.",
             });
         }
 
-        // Battle has already ended. Do not delete its results or room.
-        if (room.isQuizEnded || room.status === "Completed") {
-            return res.status(200).json({
-                success: true,
-                roomDeleted: false,
-                message: "The battle has already ended.",
+        // A normal player leaves; the room remains open.
+        player.isRemoved = true;
+        player.isReady = false;
+        player.removedAt = new Date();
+        player.removedBy = req.user._id;
+
+        await room.save();
+
+        if (io && room.roomCode) {
+            io.to(room.roomCode).emit("player-left", {
+                roomId: String(room._id),
+                playerId: userId,
+                message: "A player left the waiting room.",
+            });
+
+            io.to(room.roomCode).emit("room-updated", {
+                roomId: String(room._id),
+            });
+
+            io.emit("public-battles-updated", {
+                roomId: String(room._id),
+                status: "Waiting",
             });
         }
 
-        return res.status(400).json({
-            success: false,
-            message: "This room cannot be left in its current state.",
+        return res.status(200).json({
+            success: true,
+            roomDeleted: false,
+            message: "You left the waiting room successfully.",
         });
     } catch (error) {
         console.error("leaveRoom error:", error);
@@ -661,6 +630,7 @@ exports.leaveRoom = async (req, res) => {
         });
     }
 };
+
 
 /*
 ====================================
@@ -1969,39 +1939,41 @@ exports.getCurrentQuestion = async (req, res) => {
 // ====================================
 // Get Public Waiting Rooms
 // ====================================
+// Get public and private waiting battles for the Active Battles list
+
+
 exports.getPublicRooms = async (req, res) => {
     try {
         const rooms = await Room.find({
-            roomType: "Public",
+            roomType: { $in: ["Public", "Private"] },
             gameMode: "BATTLE",
             status: "Waiting",
-            isQuizEnded: false,
+            isQuizStarted: { $ne: true },
+            isQuizEnded: { $ne: true },
         })
             .populate("host", "name")
             .populate("quiz", "title category difficulty")
             .sort({ createdAt: -1 });
 
-        // Exclude removed players when calculating available slots.
-        const availableRooms = rooms
-            .filter((room) => {
-                const activePlayers = room.players.filter(
-                    (player) => !player.isRemoved
-                );
+        const availableRooms = rooms.map((room) => {
+            const roomObject = room.toObject();
 
-                return activePlayers.length < room.maxPlayers;
-            })
-            .map((room) => {
-                const roomObject = room.toObject();
+            roomObject.players = (roomObject.players || []).filter(
+                (player) => !player.isRemoved
+            );
 
-                roomObject.players = roomObject.players.filter(
-                    (player) => !player.isRemoved
-                );
+            roomObject.availableSlots = Math.max(
+                0,
+                room.maxPlayers - roomObject.players.length
+            );
 
-                roomObject.availableSlots =
-                    room.maxPlayers - roomObject.players.length;
+            // Never expose a private room's invitation code.
+            if (roomObject.roomType === "Private") {
+                delete roomObject.roomCode;
+            }
 
-                return roomObject;
-            });
+            return roomObject;
+        });
 
         return res.status(200).json({
             success: true,
@@ -2013,10 +1985,11 @@ exports.getPublicRooms = async (req, res) => {
 
         return res.status(500).json({
             success: false,
-            message: "Failed to fetch public rooms.",
+            message: "Failed to fetch active battles.",
         });
     }
 };
+
 
 
 // ====================================

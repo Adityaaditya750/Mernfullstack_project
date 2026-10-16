@@ -1,7 +1,8 @@
 
 const mongoose = require("mongoose");
+
 const Question = require("../model/Question");
-const Quiz = require("../model/Quiz");
+
 
 const VALID_TYPES = [
     "MCQ",

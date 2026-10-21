@@ -1,6 +1,5 @@
 
 const axios = require('axios');
-const { Resend } = require('resend');
 
 const sendOtp = async ({ channel, destination, otp, purpose }) => {
   const subject =
@@ -14,46 +13,86 @@ const sendOtp = async ({ channel, destination, otp, purpose }) => {
       : 'Use this code to reset your QuizArena password:';
 
   if (channel === 'email') {
-    const { RESEND_API_KEY, EMAIL_FROM } = process.env;
+    const {
+      MAILJET_API_KEY,
+      MAILJET_SECRET_KEY,
+      EMAIL_FROM,
+      EMAIL_FROM_NAME,
+    } = process.env;
 
-    if (!RESEND_API_KEY) {
-      throw new Error('RESEND_API_KEY is required to send email OTPs.');
+    if (!MAILJET_API_KEY || !MAILJET_SECRET_KEY) {
+      throw new Error('Mailjet API credentials are required.');
     }
 
     if (!EMAIL_FROM) {
       throw new Error('EMAIL_FROM is required to send email OTPs.');
     }
 
-    const resend = new Resend(RESEND_API_KEY);
+    const senderMatch = EMAIL_FROM.match(/^(.*?)\s*<([^<>]+)>$/);
 
-    const { data, error } = await resend.emails.send({
-      from: EMAIL_FROM,
-      to: destination,
-      subject,
-      text: `${intro} ${otp}\n\nThis code expires in 10 minutes.`,
-      html: `
-        <div style="font-family:Arial,sans-serif;max-width:480px;margin:auto">
-          <h2>QuizArena</h2>
-          <p>${intro}</p>
-          <p style="font-size:28px;font-weight:bold;letter-spacing:6px">${otp}</p>
-          <p>This code expires in 10 minutes.</p>
-          <p>If you did not request this code, you can ignore this email.</p>
-        </div>
-      `,
-    });
+    const senderEmail = senderMatch
+      ? senderMatch[2].trim()
+      : EMAIL_FROM.trim();
 
-    if (error) {
-      console.error('Resend email delivery failed:', {
-        statusCode: error.statusCode,
-        name: error.name,
-        message: error.message,
+    const senderName =
+      EMAIL_FROM_NAME ||
+      (senderMatch && senderMatch[1].trim()) ||
+      'QuizArena';
+
+    try {
+      const response = await axios.post(
+        'https://api.mailjet.com/v3.1/send',
+        {
+          Messages: [
+            {
+              From: {
+                Email: senderEmail,
+                Name: senderName,
+              },
+              To: [{ Email: destination }],
+              Subject: subject,
+              TextPart: `${intro} ${otp}\n\nThis code expires in 10 minutes.`,
+              HTMLPart: `
+                <div style="font-family:Arial,sans-serif;max-width:480px;margin:auto">
+                  <h2>QuizArena</h2>
+                  <p>${intro}</p>
+                  <p style="font-size:28px;font-weight:bold;letter-spacing:6px">${otp}</p>
+                  <p>This code expires in 10 minutes.</p>
+                  <p>If you did not request this code, you can ignore this email.</p>
+                </div>
+              `,
+            },
+          ],
+        },
+        {
+          auth: {
+            username: MAILJET_API_KEY,
+            password: MAILJET_SECRET_KEY,
+          },
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          timeout: 15000,
+        }
+      );
+
+      const message = response.data?.Messages?.[0];
+
+      if (!message || message.Status !== 'success') {
+        console.error('Mailjet email delivery failed:', message?.Errors);
+        throw new Error('Mailjet did not accept the OTP email.');
+      }
+
+      console.log('OTP email accepted by Mailjet.');
+      return;
+    } catch (error) {
+      console.error('Mailjet email delivery failed:', {
+        status: error.response?.status,
+        message: error.response?.data || error.message,
       });
 
       throw new Error('Unable to send OTP email.');
     }
-
-    console.log('OTP email accepted by Resend:', data?.id);
-    return;
   }
 
   const {

@@ -18,11 +18,10 @@ const notifyUser = (req, userId, event, payload) => {
 };
 
 // GET /api/friends/search?username=adi
+// GET /api/friends/search?username=adi
 const searchUsers = async (req, res) => {
   try {
-    const username = String(req.query.username || "")
-      .trim()
-      .toLowerCase();
+    const username = String(req.query.username || "").trim();
 
     if (username.length < 2) {
       return res.status(400).json({
@@ -33,7 +32,10 @@ const searchUsers = async (req, res) => {
 
     const users = await User.find({
       _id: { $ne: req.user._id },
-      username: { $regex: escapeRegex(username) },
+      username: {
+        $regex: escapeRegex(username),
+        $options: "i",
+      },
     })
       .select("_id name username")
       .limit(20)
@@ -61,13 +63,13 @@ const searchUsers = async (req, res) => {
       const isOutgoing =
         String(relationship.requester) === String(req.user._id);
 
-      // Accepted friendships take priority over old rejected records.
       const previous = relationshipMap.get(otherUserId);
 
       if (
         !previous ||
         relationship.status === "accepted" ||
-        (relationship.status === "pending" && previous.status === "rejected")
+        (relationship.status === "pending" &&
+          previous.status === "rejected")
       ) {
         relationshipMap.set(otherUserId, {
           status: relationship.status,

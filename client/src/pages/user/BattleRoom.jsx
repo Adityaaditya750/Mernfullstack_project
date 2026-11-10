@@ -10,6 +10,16 @@ import { apiRequest, jsonBody } from '../../lib/api';
 
 import { LoadingState, Notice, PageFrame } from '../../components/PageFrame';
 import socket from '../../socket';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '../../components/ui/alert-dialog';
 
 
 
@@ -83,6 +93,8 @@ const BattleRoom = () => {
   const [friendSearch, setFriendSearch] = useState('');
   const [invitedIds, setInvitedIds] = useState([]);
   const [leaveInProgress, setLeaveInProgress] = useState(false);
+  const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
+  const [pendingNavigation, setPendingNavigation] = useState('');
 
 
 
@@ -162,8 +174,14 @@ const BattleRoom = () => {
       setError('');
 
     } catch (requestError) {
-
-      setError(requestError.message);
+      if (
+        requestError.message === 'Room not found.' ||
+        requestError.message === 'You are not an active player in this room.'
+      ) {
+        navigate('/battle', { replace: true });
+      } else {
+        setError(requestError.message);
+      }
 
     } finally {
 
@@ -181,6 +199,45 @@ const BattleRoom = () => {
     const timer = window.setInterval(() => loadRoom(false), 10000);
     return () => window.clearInterval(timer);
   }, [loadRoom, pollKey]);
+
+  useEffect(() => {
+    if (room?.status !== 'Waiting') return undefined;
+
+    const handleNavigationClick = (event) => {
+      if (
+        event.defaultPrevented ||
+        event.button !== 0 ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.shiftKey ||
+        event.altKey
+      ) {
+        return;
+      }
+
+      const link = event.target instanceof Element
+        ? event.target.closest('a[href]')
+        : null;
+      if (!link || link.target === '_blank' || link.hasAttribute('download')) {
+        return;
+      }
+
+      const destination = new URL(link.href, window.location.href);
+      if (
+        destination.origin !== window.location.origin ||
+        destination.pathname === window.location.pathname
+      ) {
+        return;
+      }
+
+      event.preventDefault();
+      setPendingNavigation(`${destination.pathname}${destination.search}${destination.hash}`);
+      setLeaveDialogOpen(true);
+    };
+
+    document.addEventListener('click', handleNavigationClick, true);
+    return () => document.removeEventListener('click', handleNavigationClick, true);
+  }, [room?.status]);
 
   // Socket.IO provides live room, timer, and leaderboard updates.
   useEffect(() => {
@@ -212,6 +269,10 @@ const BattleRoom = () => {
         setError(requestError.message);
       }
     };
+    const onRoomClosed = (payload = {}) => {
+      if (payload.roomId && String(payload.roomId) !== String(roomId)) return;
+      navigate('/battle', { replace: true });
+    };
 
     socket.on('connect', joinCurrentRoom);
     socket.on('room-updated', refreshRoom);
@@ -221,6 +282,7 @@ const BattleRoom = () => {
     socket.on('timer-ended', refreshRoom);
     socket.on('leaderboard-updated', onLeaderboard);
     socket.on('battle-ended', onBattleEnded);
+    socket.on('room-closed', onRoomClosed);
     if (socket.connected) joinCurrentRoom();
 
     return () => {
@@ -232,8 +294,9 @@ const BattleRoom = () => {
       socket.off('timer-ended', refreshRoom);
       socket.off('leaderboard-updated', onLeaderboard);
       socket.off('battle-ended', onBattleEnded);
+      socket.off('room-closed', onRoomClosed);
     };
-  }, [room?.roomCode, roomId, user?._id, loadRoom]);
+  }, [room?.roomCode, roomId, user?._id, loadRoom, navigate]);
 
 
 
@@ -431,21 +494,17 @@ const BattleRoom = () => {
 
 
 
-  const leaveRoom = async () => {
+  const leaveRoom = async (destination = '/battle') => {
     if (busy || leaveInProgress) return;
-    const confirmed = window.confirm(
-      isHost && room?.status === 'Waiting'
-        ? 'Close this waiting room and return to the Battle page?'
-        : 'Are you sure you want to leave this room?'
-    );
-    if (!confirmed) return;
     setLeaveInProgress(true);
     setBusy(true);
     setError('');
     setSuccessMessage('');
     try {
       await apiRequest(`/room/${roomId}/leave`, { method: 'DELETE' });
-      navigate('/battle', { replace: true });
+      setLeaveDialogOpen(false);
+      setPendingNavigation('');
+      navigate(destination, { replace: true });
     } catch (requestError) {
       setError(requestError.message || 'Could not leave this room.');
       setLeaveInProgress(false);
@@ -675,7 +734,7 @@ const BattleRoom = () => {
                     {busy ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}{busy ? 'Starting...' : 'Start battle'}
                   </button>}
                 </div>
-                <button type="button" disabled={busy} onClick={leaveRoom} className="mt-5 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-rose-200 px-4 text-sm font-bold text-rose-700 hover:bg-rose-50 disabled:opacity-50">
+                <button type="button" disabled={busy} onClick={() => { setPendingNavigation(''); setLeaveDialogOpen(true); }} className="mt-5 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-rose-200 px-4 text-sm font-bold text-rose-700 hover:bg-rose-50 disabled:opacity-50">
                   <LogOut className="h-4 w-4" /> {busy && leaveInProgress ? 'Leaving room...' : 'Leave Room'}
                 </button>
               </section>
@@ -1106,6 +1165,51 @@ const BattleRoom = () => {
         </>
 
       )}
+
+      <AlertDialog
+        open={leaveDialogOpen}
+        onOpenChange={(open) => {
+          setLeaveDialogOpen(open);
+          if (!open && !leaveInProgress) setPendingNavigation('');
+        }}
+      >
+        <AlertDialogContent className="border border-[#343641] bg-[#17181f] text-[#f4f4f6]">
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {isHost && room?.status === 'Waiting'
+                ? 'Close this waiting room?'
+                : 'Leave this battle room?'}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-[#a2a4b1]">
+              {isHost && room?.status === 'Waiting'
+                ? pendingNavigation
+                  ? 'Leaving closes this waiting room and returns the other players to the battle lobby. You will continue to the page you selected.'
+                  : 'Leaving closes this waiting room and returns all players to the battle lobby.'
+                : pendingNavigation
+                  ? 'You will leave the waiting room before opening the page you selected.'
+                  : 'You will leave the waiting room and return to the battle lobby.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="border-[#343641] bg-[#14151b]">
+            <AlertDialogCancel
+              disabled={leaveInProgress}
+              className="border-[#343641] bg-transparent text-[#f4f4f6] hover:bg-[#242630]"
+            >
+              Stay in room
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={leaveInProgress}
+              onClick={(event) => {
+                event.preventDefault();
+                leaveRoom(pendingNavigation || '/battle');
+              }}
+              className="bg-rose-600 text-white hover:bg-rose-700"
+            >
+              {leaveInProgress ? 'Leaving...' : 'Leave room'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
     </PageFrame>
 

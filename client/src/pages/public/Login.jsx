@@ -61,7 +61,7 @@ const Login = () => {
   const location = useLocation();
   const { login } = useAuth();
 
-  const [showPassword, setShowPassword] = useState(false);
+  const [showPassword, setShowPassword] = useState(true);
   const [showPasswordText, setShowPasswordText] = useState(false);
 
   const passwordRef = useRef(null);
@@ -198,14 +198,14 @@ const Login = () => {
     formik.touched.password && formik.errors.password;
 
   return (
-    <main className="min-h-[calc(100dvh-4rem)] w-full overflow-x-clip bg-[#f4f7f7]">
-      <div className="mx-auto grid min-h-[calc(100dvh-4rem)] w-full max-w-[1500px] lg:grid-cols-[1.05fr_0.95fr]">
+    <main className="login-reference min-h-[calc(100dvh-4rem)] w-full overflow-x-clip bg-[#0b0c10]">
+      <div className="mx-auto flex min-h-[calc(100dvh-4rem)] w-full items-center justify-center px-4 py-8">
 
         {/* =====================================
             LEFT SIDE — QUIZ ARENA
         ====================================== */}
 
-        <section className="relative hidden overflow-hidden bg-[#063b49] lg:flex">
+        <section className="hidden overflow-hidden bg-[#063b49]">
           <motion.div
             className="absolute -left-40 -top-40 h-[500px] w-[500px] rounded-full bg-[#00d98b]/10 blur-3xl"
             animate={{
@@ -424,7 +424,7 @@ const Login = () => {
             RIGHT SIDE — LOGIN
         ====================================== */}
 
-        <section className="relative flex min-w-0 items-center justify-center px-4 py-8 sm:px-8 sm:py-10 lg:px-6 xl:px-12">
+        <section className="relative flex min-w-0 w-full items-center justify-center px-0 py-4">
           <motion.div
             className="absolute right-0 top-0 h-64 w-64 rounded-full bg-[#00d98b]/10 blur-3xl lg:hidden"
             animate={{ scale: [1, 1.15, 1] }}
@@ -439,7 +439,7 @@ const Login = () => {
             initial={{ opacity: 0, y: 25 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, ease: 'easeOut' }}
-            className="relative z-10 w-full max-w-[410px]"
+            className="relative z-10 w-full max-w-[688px]"
           >
             {/* Mobile Logo */}
 
@@ -447,7 +447,7 @@ const Login = () => {
               initial={{ opacity: 0, y: -15 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
-              className="mb-6 flex items-center gap-3 sm:mb-8 lg:hidden"
+              className="hidden"
             >
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#063b49] text-[#00d98b]">
                 <Trophy size={21} />
@@ -469,7 +469,7 @@ const Login = () => {
                 damping: 25,
               }}
             >
-              <Card className="w-full overflow-hidden rounded-2xl border border-white/80 bg-[#f8f9f9] p-5 shadow-[0_25px_80px_rgba(6,59,73,0.12)] sm:rounded-[28px] sm:p-7 md:p-9 lg:p-7 xl:p-9">
+              <Card className="w-full overflow-hidden rounded-2xl border border-[#292b35] bg-[#17181f] p-6 shadow-none sm:rounded-[28px] sm:p-8 lg:p-10">
                 {/* Animated Title */}
 
                 <AnimatePresence mode="wait" initial={false}>
@@ -486,13 +486,12 @@ const Login = () => {
                         Sign in
                       </p>
 
-                      <h2 className="text-center text-2xl font-semibold tracking-tight text-[#063b49]">
+                      <h2 className="text-left text-3xl font-bold tracking-tight text-[#f4f4f6] sm:text-4xl">
                         Welcome back
                       </h2>
 
-                      <p className="mt-2 text-center text-sm leading-6 text-slate-500">
-                        Enter your email or phone number to
-                        continue your journey.
+                      <p className="mt-2 text-left text-sm leading-6 text-[#a2a4b1] sm:text-base">
+                        Log in to continue your learning streak.
                       </p>
                     </motion.div>
                   ) : (
@@ -505,15 +504,15 @@ const Login = () => {
                       transition={{ duration: 0.35 }}
                     >
                       <p className="mb-3 text-center text-xs font-semibold uppercase tracking-[0.22em] text-[#00a96f]">
-                        Almost there
+                        Sign in
                       </p>
 
-                      <h2 className="text-center text-2xl font-semibold tracking-tight text-[#063b49]">
-                        Enter your password
+                      <h2 className="text-left text-3xl font-bold tracking-tight text-[#f4f4f6] sm:text-4xl">
+                        Welcome back
                       </h2>
 
-                      <p className="mt-2 text-center text-sm leading-6 text-slate-500">
-                        Welcome back. Let's get you into the arena.
+                      <p className="mt-2 text-left text-sm leading-6 text-[#a2a4b1] sm:text-base">
+                        Log in to continue your learning streak.
                       </p>
                     </motion.div>
                   )}
@@ -564,7 +563,7 @@ const Login = () => {
                       htmlFor="identifier"
                       className="text-xs font-semibold text-[#063b49]"
                     >
-                      Email address or phone number
+                      Email or username
                     </label>
 
                     <div className="relative">
@@ -744,9 +743,7 @@ const Login = () => {
                         <LoadingSpinner />
                       ) : (
                         <>
-                          {showPassword
-                            ? 'Login to Quiz Arena'
-                            : 'Continue'}
+                          Log in
 
                           <ArrowRight
                             size={17}
@@ -760,7 +757,7 @@ const Login = () => {
 
                 {/* Divider */}
 
-                <div className="my-7 flex items-center gap-3">
+                <div className="my-7 hidden items-center gap-3">
                   <div className="h-px flex-1 bg-black/[0.06]" />
 
                   <span className="text-[10px] font-medium tracking-wider text-slate-400">

@@ -3,9 +3,8 @@ const crypto = require("crypto");
 const Room = require("../model/Room");
 const User = require("../model/User");
 const Friendship = require("../model/Friendship");
-
-// Pending invitations are kept in memory for this server process.
-const pendingInvitations = new Map();
+const Notification = require("../model/Notification");
+const { createNotification } = require("../service/notificationService");
 
 async function getRoomForInvite(roomCode, senderId, recipientId) {
   const room = await Room.findOne({
@@ -101,12 +100,16 @@ module.exports = (io, socket) => {
 
       // Prevent repeated outstanding invitations to the same room
       // from the same sender to the same recipient.
-      const duplicate = [...pendingInvitations.values()].find(
-        (invite) =>
-          invite.senderId === senderId &&
-          invite.recipientId === recipientId &&
-          invite.roomCode === room.roomCode
-      );
+      const duplicate = await Notification.exists({
+        recipient: recipientId,
+        actor: senderId,
+        type: "battle_invite",
+        "data.roomId": String(room._id),
+        $or: [
+          { status: "pending" },
+          { status: "accepted", readAt: null },
+        ],
+      });
 
       if (duplicate) {
         throw new Error("An invitation is already pending.");
@@ -123,13 +126,27 @@ module.exports = (io, socket) => {
         createdAt: new Date().toISOString(),
       };
 
-      pendingInvitations.set(invitationId, invitation);
+      const notification = await createNotification(io, {
+        recipient: recipientId,
+        actor: senderId,
+        type: "battle_invite",
+        title: "Battle room invitation",
+        message: `${socket.user.name || socket.user.username || "A friend"} invited you to ${room.roomName}.`,
+        data: {
+          invitationId,
+          roomId: String(room._id),
+          roomCode: room.roomCode,
+          roomName: room.roomName,
+        },
+        status: "pending",
+      });
 
       // The recipient's private room is established by socket.js.
       io.to(`user:${recipientId}`).emit(
         "battle-invitation-received",
         {
           invitationId,
+          notificationId: String(notification._id),
           roomCode: room.roomCode,
           roomName: room.roomName,
           host: room.host
@@ -179,21 +196,38 @@ module.exports = (io, socket) => {
         );
       }
 
-      const invitation = pendingInvitations.get(invitationId);
+      const notification = await Notification.findOne({
+        type: "battle_invite",
+        recipient: senderId,
+        "data.invitationId": invitationId,
+      });
 
-      if (!invitation || invitation.recipientId !== senderId) {
+      if (!notification) {
         throw new Error("Invitation not found or already handled.");
       }
 
-      if (action === "decline") {
-        pendingInvitations.delete(invitationId);
+      if (
+        (notification.status === "declined" && action === "accept") ||
+        (notification.status === "accepted" && action === "decline")
+      ) {
+        throw new Error(
+          notification.status === "declined"
+            ? "This battle invitation was declined."
+            : "This battle invitation was already accepted."
+        );
+      }
 
-        io.to(`user:${invitation.senderId}`).emit(
+      if (action === "decline") {
+        notification.status = "declined";
+        notification.readAt = new Date();
+        await notification.save();
+
+        io.to(`user:${String(notification.actor)}`).emit(
           "battle-invitation-declined",
           {
             invitationId,
             recipientId: senderId,
-            roomCode: invitation.roomCode,
+            roomCode: notification.data.roomCode,
           }
         );
 
@@ -208,13 +242,14 @@ module.exports = (io, socket) => {
 
       // Revalidate everything when the recipient accepts.
       const room = await getRoomForInvite(
-        invitation.roomCode,
-        invitation.senderId,
+        notification.data.roomCode,
+        String(notification.actor),
         senderId
       );
 
-      // Keep the invitation pending if validation fails so the
-      // recipient can still decline it.
+      notification.status = "accepted";
+      await notification.save();
+
       socket.emit("battle-invitation-accepted-ready", {
         invitationId,
         roomCode: room.roomCode,
@@ -222,7 +257,7 @@ module.exports = (io, socket) => {
         message: "Invitation accepted. Join the room to continue.",
       });
 
-      io.to(`user:${invitation.senderId}`).emit(
+      io.to(`user:${String(notification.actor)}`).emit(
         "battle-invitation-accepted",
         {
           invitationId,
@@ -231,7 +266,6 @@ module.exports = (io, socket) => {
         }
       );
 
-      pendingInvitations.delete(invitationId);
     } catch (error) {
       socket.emit("battle-invitation-error", {
         action: "respond",
@@ -240,13 +274,4 @@ module.exports = (io, socket) => {
     }
   });
 
-  // Remove invitations created by a user when that user disconnects.
-  // Invitations addressed to the disconnected user remain pending.
-  socket.on("disconnect", () => {
-    for (const [id, invitation] of pendingInvitations.entries()) {
-      if (invitation.senderId === senderId) {
-        pendingInvitations.delete(id);
-      }
-    }
-  });
 };

@@ -105,7 +105,7 @@ const Register = () => {
     }`;
 
   return (
-    <main className="relative min-h-[calc(100vh-4rem)] overflow-hidden bg-[#f7fbfa]">
+    <main className="register-reference relative min-h-[calc(100vh-4rem)] overflow-hidden bg-[#0b0c10]">
       {/* Background decoration */}
 
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -142,13 +142,23 @@ const Register = () => {
       {/* Main content */}
 
       <div className="relative z-10 mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-7xl items-center px-4 py-8 sm:px-6 sm:py-10 lg:px-8 lg:py-12">
-        <div className="grid w-full overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-[0_25px_80px_rgba(6,59,73,0.10)] lg:min-h-[650px] lg:grid-cols-2">
+        <div className="register-layout grid w-full gap-8 lg:grid-cols-2">
+
+          <section className="register-copy-panel flex flex-col justify-center py-8 lg:py-12">
+            <h1 className="max-w-xl text-5xl font-bold tracking-[-0.04em] text-[#f4f4f6] sm:text-6xl lg:text-7xl">
+              Join the arena
+            </h1>
+            <p className="mt-5 max-w-xl text-lg leading-8 text-[#a2a4b1] sm:text-xl">
+              Create your account to practise, battle friends and climb the
+              leaderboard.
+            </p>
+          </section>
 
           {/* =====================================
               LEFT SIDE — REGISTER FORM
           ====================================== */}
 
-          <section className="flex items-center justify-center px-5 py-10 sm:px-8 sm:py-12 lg:px-12 lg:py-14 xl:px-16">
+          <section className="register-form-panel flex items-center justify-center rounded-3xl border border-[#292b35] bg-[#17181f] px-5 py-8 sm:px-8 sm:py-10 lg:px-10 lg:py-10">
             <motion.div
               initial={{ opacity: 0, x: -25 }}
               animate={{ opacity: 1, x: 0 }}
@@ -159,7 +169,7 @@ const Register = () => {
 
               <Link
                 to="/"
-                className="mb-8 inline-flex items-center gap-2 text-xl font-bold tracking-tight text-[#063b49] sm:text-2xl"
+                className="register-form-logo mb-8 inline-flex items-center gap-2 text-xl font-bold tracking-tight text-[#063b49] sm:text-2xl"
               >
                 <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#063b49] text-white">
                   <BookOpen className="h-5 w-5" />
@@ -172,7 +182,7 @@ const Register = () => {
 
               {/* Heading */}
 
-              <div className="mb-7">
+              <div className="register-form-intro mb-7">
                 <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-[#00d98b]/20 bg-[#e8fff7] px-3 py-1.5 text-xs font-semibold text-[#063b49]">
                   <Sparkles className="h-3.5 w-3.5 text-[#00b875]" />
                   Start your journey
@@ -580,7 +590,7 @@ const Register = () => {
               RIGHT SIDE — QUIZARENA VISUAL
           ====================================== */}
 
-          <section className="relative hidden min-h-[650px] overflow-hidden bg-[#063b49] lg:flex lg:items-center lg:justify-center">
+          <section className="register-old-visual relative hidden min-h-[650px] overflow-hidden bg-[#063b49] lg:flex lg:items-center lg:justify-center">
             <div className="absolute -right-24 -top-24 h-80 w-80 rounded-full bg-[#00d98b]/20 blur-3xl" />
             <div className="absolute -bottom-32 -left-24 h-96 w-96 rounded-full bg-white/10 blur-3xl" />
 

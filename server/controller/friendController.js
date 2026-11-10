@@ -3,6 +3,8 @@
 const mongoose = require("mongoose");
 const User = require("../model/User");
 const Friendship = require("../model/Friendship");
+const Notification = require("../model/Notification");
+const { createNotification } = require("../service/notificationService");
 
 // Escape special characters before using a username in a regex.
 const escapeRegex = (value) =>
@@ -149,15 +151,31 @@ const sendFriendRequest = async (req, res) => {
       existing.status = "accepted";
       existing.respondedAt = new Date();
       await existing.save();
+      await Notification.updateMany(
+        {
+          type: "friend_request",
+          "data.friendRequestId": String(existing._id),
+        },
+        { $set: { status: "accepted", readAt: new Date() } }
+      );
+
+      await createNotification(req.app.get("io"), {
+        recipient: existing.requester,
+        actor: requesterId,
+        type: "friend_request_accepted",
+        title: "Friend request accepted",
+        message: `${req.user.name || req.user.username || "A user"} accepted your friend request.`,
+        data: { friendRequestId: String(existing._id) },
+      });
 
       notifyUser(req, existing.requester, "friend-request-accepted", {
-  requestId: String(existing._id),
-  user: {
-    _id: String(req.user._id),
-    name: req.user.name,
-    username: req.user.username,
-  },
-});
+        requestId: String(existing._id),
+        user: {
+          _id: String(req.user._id),
+          name: req.user.name,
+          username: req.user.username,
+        },
+      });
 
       return res.status(200).json({
         success: true,
@@ -181,6 +199,23 @@ const sendFriendRequest = async (req, res) => {
       existing.status = "pending";
       existing.respondedAt = null;
       await existing.save();
+      await Notification.updateMany(
+        {
+          type: "friend_request",
+          "data.friendRequestId": String(existing._id),
+        },
+        { $set: { status: "declined", readAt: new Date() } }
+      );
+
+      await createNotification(req.app.get("io"), {
+        recipient: recipientId,
+        actor: requesterId,
+        type: "friend_request",
+        title: "New friend request",
+        message: `${req.user.name || req.user.username || "A user"} sent you a friend request.`,
+        data: { friendRequestId: String(existing._id) },
+        status: "pending",
+      });
 
       return res.status(201).json({
         success: true,
@@ -192,6 +227,16 @@ const sendFriendRequest = async (req, res) => {
     const friendship = await Friendship.create({
       requester: requesterId,
       recipient: recipientId,
+      status: "pending",
+    });
+
+    await createNotification(req.app.get("io"), {
+      recipient: recipientId,
+      actor: requesterId,
+      type: "friend_request",
+      title: "New friend request",
+      message: `${req.user.name || req.user.username || "A user"} sent you a friend request.`,
+      data: { friendRequestId: String(friendship._id) },
       status: "pending",
     });
 
@@ -299,6 +344,35 @@ const respondToFriendRequest = async (req, res) => {
     friendship.respondedAt = new Date();
 
     await friendship.save();
+    await Notification.updateMany(
+      {
+        type: "friend_request",
+        "data.friendRequestId": String(friendship._id),
+      },
+      {
+        $set: {
+          status: action === "accept" ? "accepted" : "declined",
+          readAt: new Date(),
+        },
+      }
+    );
+
+    await createNotification(req.app.get("io"), {
+      recipient: friendship.requester,
+      actor: req.user._id,
+      type:
+        action === "accept"
+          ? "friend_request_accepted"
+          : "friend_request_rejected",
+      title:
+        action === "accept"
+          ? "Friend request accepted"
+          : "Friend request declined",
+      message: `${req.user.name || req.user.username || "A user"} ${
+        action === "accept" ? "accepted" : "declined"
+      } your friend request.`,
+      data: { friendRequestId: String(friendship._id) },
+    });
 
     const responseEvent =
   action === "accept"
@@ -394,6 +468,12 @@ const cancelFriendRequest = async (req, res) => {
         message: "Your pending friend request was not found.",
       });
     }
+
+    await Notification.deleteMany({
+      recipient: friendship.recipient,
+      type: "friend_request",
+      "data.friendRequestId": String(friendship._id),
+    });
 
     return res.status(200).json({
       success: true,

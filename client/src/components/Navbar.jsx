@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useCallback } from "react";
-import { Link, NavLink } from "react-router-dom";
+import { Link, NavLink, useLocation } from "react-router-dom";
 
 import {
   Menu,
@@ -14,9 +14,15 @@ import {
   UserPlus,
   LogOut,
   Bell,
+  GraduationCap,
+  Moon,
+  Sun,
+  Trophy,
+  Users,
 } from "lucide-react";
 
 import { useAuth } from "../context/AuthContext";
+import LogoutConfirmation from "./LogoutConfirmation";
 
 import {
   Drawer,
@@ -32,7 +38,11 @@ import { apiRequest } from "../lib/api";
 import socket, { connectSocket } from "../socket";
 
 const Navbar = () => {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
+  const { pathname } = useLocation();
+  const isHome = pathname === "/";
+  const isAuthPage = pathname === "/login" || pathname === "/register";
+  const isReferenceNav = isHome || isAuthPage || pathname === "/about";
 
   const accountPath = user?.role === "admin" ? "/admin" : "/profile";
   const accountLabel =
@@ -40,6 +50,13 @@ const Navbar = () => {
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [pendingRequests, setPendingRequests] = useState(0);
+  const [isDark, setIsDark] = useState(() =>
+    document.documentElement.classList.contains("dark")
+  );
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", isDark);
+  }, [isDark]);
 
   // Fetch the current incoming friend-request count
   const fetchPendingRequests = useCallback(async () => {
@@ -103,18 +120,18 @@ const Navbar = () => {
   }, [user, fetchPendingRequests]);
 
   const navLinks = [
-    {
+    ...(isReferenceNav ? [] : [{
       name: "Home",
       path: "/",
       icon: Home,
-    },
+    }]),
     {
       name: "Quizzes",
       path: "/quizzes",
       icon: BookOpen,
     },
     {
-      name: "Battle",
+      name: isReferenceNav ? "Battles" : "Battle",
       path: "/battle",
       icon: Swords,
     },
@@ -123,18 +140,30 @@ const Navbar = () => {
       path: "/coding",
       icon: Code2,
     },
-    {
+    ...(isReferenceNav ? [{
+      name: "Leaderboard",
+      path: "/my-results",
+      icon: Trophy,
+    }] : []),
+    ...(isReferenceNav ? [{
+      name: "Friends",
+      path: "/friends",
+      icon: Users,
+    }] : []),
+    ...(!isReferenceNav ? [{
       name: "About",
       path: "/about",
       icon: Info,
-    },
+    }] : []),
   ];
 
   const activeClass = ({ isActive }) =>
-    `relative flex items-center gap-2 text-sm font-medium transition-colors duration-200 ${
-      isActive
-        ? "text-[#063b49]"
-        : "text-slate-700 hover:text-[#063b49]"
+    `relative flex items-center rounded-full px-3 py-2 text-[11px] font-medium transition-all duration-200 lg:px-4 lg:text-base ${
+      isHome
+        ? "text-[#a2a4b1] hover:text-white"
+        : isActive
+          ? "bg-violet-100 text-violet-800"
+          : "text-slate-700 hover:bg-violet-50 hover:text-violet-700"
     }`;
 
   // Close the mobile drawer after navigation
@@ -154,14 +183,22 @@ const Navbar = () => {
       className={({ isActive }) =>
         mobile
           ? `flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition ${
-              isActive
-                ? "bg-[#e8fff7] text-[#063b49]"
-                : "text-slate-700 hover:bg-slate-50 hover:text-[#063b49]"
+              isHome
+                ? isActive
+                  ? "bg-[#1d1f27] text-[#c4f52c]"
+                  : "text-[#d9dae0] hover:bg-[#14151b] hover:text-[#c4f52c]"
+                : isActive
+                  ? "bg-[#e8fff7] text-[#063b49]"
+                  : "text-slate-700 hover:bg-slate-50 hover:text-[#063b49]"
             }`
           : `relative flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition ${
-              isActive
-                ? "bg-[#e8fff7] text-[#063b49]"
-                : "text-slate-700 hover:bg-slate-100 hover:text-[#063b49]"
+              isHome
+                ? isActive
+                  ? "bg-[#14151b] text-[#c4f52c]"
+                  : "text-[#d9dae0] hover:bg-[#14151b] hover:text-[#c4f52c]"
+                : isActive
+                  ? "bg-[#e8fff7] text-[#063b49]"
+                  : "text-slate-700 hover:bg-slate-100 hover:text-[#063b49]"
             }`
       }
     >
@@ -192,37 +229,40 @@ const Navbar = () => {
   );
 
   return (
-    <header className="sticky top-0 z-50 w-full min-w-0 border-b border-slate-200 bg-white/95 backdrop-blur-md">
+    <header
+      className={`${
+        isHome
+          ? "absolute inset-x-0 top-0 z-50 border-b border-[#191a20] bg-[#0b0c10] text-white"
+          : "sticky top-0 z-50 border-b border-slate-200 bg-white/95 text-slate-700 backdrop-blur-md"
+      } w-full min-w-0`}
+    >
       <div
-        className="
-          mx-auto flex h-16 w-full min-w-0 max-w-7xl
-          items-center justify-between px-3 sm:px-6 lg:px-8
-        "
+        className={`mx-auto flex w-full min-w-0 items-center justify-between gap-3 px-4 sm:px-6 ${
+          isReferenceNav
+            ? "h-[50px] max-w-[1400px] lg:h-[74px]"
+            : "h-[58px] max-w-[1024px]"
+        }`}
       >
         {/* LOGO */}
         <Link
           to="/"
           onClick={closeDrawer}
-          className="
-            flex min-w-0 shrink-0 items-center gap-2
-            text-xl font-bold tracking-tight text-[#063b49] sm:text-2xl
-          "
+          className={`flex min-w-0 shrink-0 items-center gap-1.5 text-sm font-extrabold tracking-tight lg:gap-3 lg:text-2xl ${
+            isReferenceNav ? "text-white" : "text-[#11133f]"
+          }`}
         >
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#063b49] text-white">
-            <BookOpen className="h-4 w-4" />
-          </div>
-
-          <span>
-            Quiz<span className="text-[#00d98b]">Arena</span>
-          </span>
+          {isReferenceNav ? (
+            <span className="flex h-5 w-5 items-center justify-center rounded-md bg-[#c4f52c] text-[10px] font-black text-[#101109] lg:h-10 lg:w-10 lg:rounded-xl lg:text-xl">Q</span>
+          ) : (
+            <GraduationCap className="h-9 w-9 fill-violet-500 text-violet-400" strokeWidth={1.7} />
+          )}
+          <span>{isReferenceNav ? <>Quiz<span className="text-[#c4f52c]">Arena</span></> : <>Quiz<span className="text-fuchsia-400">Arena</span></>}</span>
         </Link>
 
         {/* DESKTOP NAVIGATION */}
-        <nav className="hidden min-w-0 lg:block">
-          <ul className="flex items-center gap-5 lg:gap-7">
+        <nav className="hidden min-w-0 md:block">
+          <ul className="flex items-center gap-0.5">
             {navLinks.map((link) => {
-              const Icon = link.icon;
-
               return (
                 <li key={link.path}>
                   <NavLink
@@ -230,17 +270,7 @@ const Navbar = () => {
                     end={link.path === "/"}
                     className={activeClass}
                   >
-                    {({ isActive }) => (
-                      <span className="relative flex items-center gap-2 whitespace-nowrap py-1">
-                        <Icon className="h-4 w-4" />
-
-                        <span>{link.name}</span>
-
-                        {isActive && (
-                          <span className="absolute -bottom-2 left-0 h-0.5 w-full rounded-full bg-[#00d98b]" />
-                        )}
-                      </span>
-                    )}
+                    {link.name}
                   </NavLink>
                 </li>
               );
@@ -249,7 +279,21 @@ const Navbar = () => {
         </nav>
 
         {/* DESKTOP AUTHENTICATION */}
-        <div className="hidden shrink-0 items-center gap-2 lg:flex">
+        <div className="hidden shrink-0 items-center gap-2 md:flex">
+          {!isReferenceNav && <button
+            type="button"
+            onClick={() => setIsDark((current) => !current)}
+            aria-label={`Switch to ${isDark ? "light" : "dark"} theme`}
+            className={`flex h-8 items-center gap-1 rounded-full border px-1.5 transition ${
+              isHome
+                ? "border-violet-500/60 bg-[#161143]/80 text-violet-300"
+                : "border-slate-200 bg-white text-violet-600"
+            }`}
+          >
+            <Sun className={`h-4 w-4 rounded-full ${!isDark ? "bg-amber-400 p-0.5 text-[#141039]" : ""}`} />
+            <Moon className={`h-4 w-4 rounded-full ${isDark ? "bg-violet-500 p-0.5 text-white" : ""}`} />
+          </button>}
+
           {user ? (
             <>
               {/* Notifications Bell */}
@@ -258,11 +302,11 @@ const Navbar = () => {
               {/* Profile */}
               <Link
                 to={accountPath}
-                className="
-                  flex items-center gap-2 rounded-lg px-3 py-2
-                  text-sm font-medium text-slate-700 transition
-                  hover:bg-slate-100 hover:text-[#063b49]
-                "
+                className={`flex items-center gap-2 rounded-lg px-3 py-2 font-medium transition ${
+                  isHome
+                    ? "text-[10px] text-[#d9dae0] hover:bg-[#14151b] hover:text-white lg:text-sm"
+                    : "text-sm text-slate-700 hover:bg-slate-100"
+                }`}
               >
                 <UserCircle className="h-4 w-4" />
 
@@ -272,53 +316,51 @@ const Navbar = () => {
               </Link>
 
               {/* Logout */}
-              <Button
-                onClick={logout}
-                variant="outline"
-                size="sm"
-                className="
-                  flex items-center gap-2 rounded-lg border-slate-200
-                  text-slate-700 transition hover:border-red-200
-                  hover:bg-red-50 hover:text-red-600
-                "
+              <LogoutConfirmation
+                type="button"
+                className={`flex items-center gap-2 rounded-lg transition ${
+                  isHome
+                    ? "h-8 border border-[#24262d] bg-transparent px-3 text-[10px] text-[#f4f4f6] hover:border-[#c4f52c] hover:bg-[#14151b] hover:text-[#c4f52c] lg:h-12 lg:px-5 lg:text-sm"
+                    : "min-h-9 border border-slate-200 px-3 text-sm text-slate-700 hover:border-red-200 hover:bg-red-50 hover:text-red-600"
+                }`}
               >
                 <LogOut className="h-4 w-4" />
                 Logout
-              </Button>
+              </LogoutConfirmation>
             </>
           ) : (
             <>
               {/* Login */}
-              <Link
+              {pathname !== "/register" && <Link
                 to="/login"
-                className="
-                  flex items-center gap-2 rounded-lg px-4 py-2
-                  text-sm font-medium text-slate-700 transition
-                  hover:bg-slate-100 hover:text-[#063b49]
-                "
+                className={`rounded-lg border px-3.5 py-2 text-[10px] font-semibold transition ${
+                  pathname === "/register"
+                    ? "border-0 bg-[#c4f52c] px-5 py-3 text-sm text-[#101109] hover:bg-[#d2ff43] lg:px-7 lg:py-4 lg:text-base"
+                    : isReferenceNav
+                    ? "border-[#24262d] px-5 py-3 text-sm text-white hover:border-[#c4f52c] lg:px-6 lg:py-4 lg:text-base"
+                    : "border-slate-200 text-slate-700 hover:bg-slate-100"
+                }`}
               >
-                <LogIn className="h-4 w-4" />
-                Login
-              </Link>
+              Log in
+              </Link>}
 
               {/* Register */}
-              <Link
+              {pathname !== "/login" && <Link
                 to="/register"
-                className="
-                  flex items-center gap-2 rounded-lg bg-[#063b49]
-                  px-4 py-2 text-sm font-medium text-white transition
-                  hover:bg-[#052f3a]
-                "
+                className={`rounded-lg px-3.5 py-2 text-[10px] font-semibold transition ${
+                  isReferenceNav
+                    ? "bg-[#c4f52c] px-5 py-3 text-sm text-[#101109] hover:bg-[#d2ff43] lg:px-7 lg:py-4 lg:text-base"
+                    : "bg-gradient-to-r from-[#a72cff] to-[#7218f5] text-white shadow-[0_0_18px_rgba(161,39,255,0.35)] hover:brightness-110"
+                }`}
               >
-                <UserPlus className="h-4 w-4" />
-                Register
-              </Link>
+              {isHome || pathname === "/about" ? "Get started" : "Register"}
+              </Link>}
             </>
           )}
         </div>
 
         {/* MOBILE DRAWER */}
-        <div className="ml-3 shrink-0 lg:hidden">
+        <div className="ml-3 shrink-0 md:hidden">
           <Drawer
             direction="right"
             open={drawerOpen}
@@ -329,10 +371,11 @@ const Navbar = () => {
               <Button
                 variant="ghost"
                 size="icon"
-                className="
-                  h-10 w-10 rounded-lg text-slate-700 transition
-                  hover:bg-slate-100 hover:text-[#063b49]
-                "
+                className={`h-9 w-9 rounded-lg transition ${
+                  isHome
+                    ? "text-white hover:bg-white/10"
+                    : "text-slate-700 hover:bg-slate-100 hover:text-[#063b49]"
+                }`}
               >
                 <Menu className="h-6 w-6" />
                 <span className="sr-only">Open navigation menu</span>
@@ -341,25 +384,39 @@ const Navbar = () => {
 
             {/* Drawer Content */}
             <DrawerContent
-              className="
-                h-full w-[min(22rem,90vw)] rounded-none
-                border-l border-slate-200 bg-white
-              "
+              className={`h-full w-[min(22rem,90vw)] rounded-none border-l ${
+                isHome
+                  ? "border-[#24262d] bg-[#0b0c10] text-[#f4f4f6]"
+                  : "border-slate-200 bg-white"
+              }`}
             >
               {/* Drawer Header */}
-              <DrawerHeader className="border-b border-slate-200 px-5 py-5">
+              <DrawerHeader
+                className={`border-b px-5 py-5 ${
+                  isHome ? "border-[#24262d]" : "border-slate-200"
+                }`}
+              >
                 <DrawerTitle
-                  className="
-                    flex items-center gap-2 text-left text-xl
-                    font-bold tracking-tight text-[#063b49]
-                  "
+                  className={`flex items-center gap-2 text-left text-xl font-bold tracking-tight ${
+                    isHome ? "text-white" : "text-[#063b49]"
+                  }`}
                 >
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#063b49] text-white">
-                    <BookOpen className="h-4 w-4" />
+                  <div
+                    className={`flex h-8 w-8 items-center justify-center rounded-lg ${
+                      isHome
+                        ? "bg-[#c4f52c] text-[#101109]"
+                        : "bg-[#063b49] text-white"
+                    }`}
+                  >
+                    {isHome ? (
+                      <span className="text-sm font-black">Q</span>
+                    ) : (
+                      <BookOpen className="h-4 w-4" />
+                    )}
                   </div>
 
                   <span>
-                    Quiz<span className="text-[#00d98b]">Arena</span>
+                    Quiz<span className={isHome ? "text-[#c4f52c]" : "text-[#00d98b]"}>Arena</span>
                   </span>
                 </DrawerTitle>
               </DrawerHeader>
@@ -379,9 +436,13 @@ const Navbar = () => {
                         onClick={closeDrawer}
                         className={({ isActive }) =>
                           `flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition ${
-                            isActive
-                              ? "bg-[#e8fff7] text-[#063b49]"
-                              : "text-slate-700 hover:bg-slate-50 hover:text-[#063b49]"
+                            isHome
+                              ? isActive
+                                ? "bg-[#1d1f27] text-[#c4f52c]"
+                                : "text-[#d9dae0] hover:bg-[#14151b] hover:text-white"
+                              : isActive
+                                ? "bg-[#e8fff7] text-[#063b49]"
+                                : "text-slate-700 hover:bg-slate-50 hover:text-[#063b49]"
                           }`
                         }
                       >
@@ -392,23 +453,37 @@ const Navbar = () => {
                   })}
                 </div>
 
-                <div className="my-5 border-t border-slate-200" />
+                <div
+                  className={`my-5 border-t ${
+                    isHome ? "border-[#24262d]" : "border-slate-200"
+                  }`}
+                />
 
                 {/* LOGGED-IN USER */}
                 {user ? (
                   <div className="flex flex-col gap-2">
                     {/* User Information */}
-                    <div className="mb-2 flex items-center gap-3 rounded-lg bg-slate-50 px-4 py-3">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#e8fff7] text-[#063b49]">
+                    <div
+                      className={`mb-2 flex items-center gap-3 rounded-lg px-4 py-3 ${
+                        isHome ? "bg-[#14151b]" : "bg-slate-50"
+                      }`}
+                    >
+                      <div
+                        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${
+                          isHome
+                            ? "bg-[#1d1f27] text-[#c4f52c]"
+                            : "bg-[#e8fff7] text-[#063b49]"
+                        }`}
+                      >
                         <UserCircle className="h-6 w-6" />
                       </div>
 
                       <div className="min-w-0">
-                        <p className="text-xs text-slate-500">
+                        <p className={`text-xs ${isHome ? "text-[#a2a4b1]" : "text-slate-500"}`}>
                           Signed in as
                         </p>
 
-                        <p className="mt-1 truncate text-sm font-semibold text-[#063b49]">
+                        <p className={`mt-1 truncate text-sm font-semibold ${isHome ? "text-white" : "text-[#063b49]"}`}>
                           {user.name}
                         </p>
                       </div>
@@ -421,31 +496,27 @@ const Navbar = () => {
                     <Link
                       to={accountPath}
                       onClick={closeDrawer}
-                      className="
-                        flex items-center gap-3 rounded-lg px-4 py-3
-                        text-sm font-medium text-slate-700 transition
-                        hover:bg-slate-50 hover:text-[#063b49]
-                      "
+                      className={`flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition ${
+                        isHome
+                          ? "text-[#d9dae0] hover:bg-[#14151b] hover:text-[#c4f52c]"
+                          : "text-slate-700 hover:bg-slate-50 hover:text-[#063b49]"
+                      }`}
                     >
                       <UserCircle className="h-5 w-5" />
                       {accountLabel}
                     </Link>
 
                     {/* Logout */}
-                    <button
-                      onClick={() => {
-                        closeDrawer();
-                        logout();
-                      }}
-                      className="
-                        mt-1 flex w-full items-center gap-3 rounded-lg
-                        px-4 py-3 text-left text-sm font-medium
-                        text-red-600 transition hover:bg-red-50
-                      "
+                    <LogoutConfirmation
+                      className={`mt-1 flex w-full items-center gap-3 rounded-lg border px-4 py-3 text-left text-sm font-medium transition ${
+                        isHome
+                          ? "border-[#24262d] text-[#f4f4f6] hover:border-[#c4f52c] hover:bg-[#14151b] hover:text-[#c4f52c]"
+                          : "border-transparent text-red-600 hover:bg-red-50"
+                      }`}
                     >
                       <LogOut className="h-5 w-5" />
                       Logout
-                    </button>
+                    </LogoutConfirmation>
                   </div>
                 ) : (
                   /* LOGGED-OUT USER */
@@ -454,11 +525,11 @@ const Navbar = () => {
                     <Link
                       to="/login"
                       onClick={closeDrawer}
-                      className="
-                        flex items-center gap-3 rounded-lg px-4 py-3
-                        text-sm font-medium text-slate-700 transition
-                        hover:bg-slate-50 hover:text-[#063b49]
-                      "
+                      className={`flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition ${
+                        isHome
+                          ? "text-[#d9dae0] hover:bg-[#14151b] hover:text-white"
+                          : "text-slate-700 hover:bg-slate-50 hover:text-[#063b49]"
+                      }`}
                     >
                       <LogIn className="h-5 w-5" />
                       Login
@@ -468,12 +539,11 @@ const Navbar = () => {
                     <Link
                       to="/register"
                       onClick={closeDrawer}
-                      className="
-                        mt-1 flex items-center justify-center gap-2
-                        rounded-lg bg-[#063b49] px-4 py-3
-                        text-sm font-medium text-white transition
-                        hover:bg-[#052f3a]
-                      "
+                      className={`mt-1 flex items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-medium transition ${
+                        isHome
+                          ? "bg-[#c4f52c] text-[#101109] hover:bg-[#d2ff43]"
+                          : "bg-[#063b49] text-white hover:bg-[#052f3a]"
+                      }`}
                     >
                       <UserPlus className="h-5 w-5" />
                       Register

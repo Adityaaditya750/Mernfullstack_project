@@ -96,6 +96,15 @@ function App() {
           />
 
           <Route
+            path="friends"
+            element={
+              <ProtectedRoute>
+                <Profile friendsOnly />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
             path="quizzes"
             element={
               <ProtectedRoute>

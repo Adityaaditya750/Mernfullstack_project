@@ -1,28 +1,19 @@
-
 import { useEffect, useState } from 'react';
-import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft, ArrowRight, BookOpen, Check, Clock3, LockKeyhole,
-  Sparkles, Swords, Users,
+  Check, LoaderCircle, Minus, Plus,
 } from 'lucide-react';
 
 import { apiRequest, jsonBody } from '../../lib/api';
-import { Notice, PageFrame } from '../../components/PageFrame';
-
-const inputClass =
-  'mt-2 h-12 w-full rounded-xl border border-[#063b49]/15 bg-white px-4 text-sm text-[#063b49] outline-none focus:border-[#00c982] focus:ring-4 focus:ring-[#00d98b]/10';
 
 const CreateBattle = () => {
   const navigate = useNavigate();
-  const reduceMotion = useReducedMotion();
 
   const [source, setSource] = useState('library');
   const [quizzes, setQuizzes] = useState([]);
   const [quizId, setQuizId] = useState('');
   const [loadingQuizzes, setLoadingQuizzes] = useState(true);
-  const [roomName, setRoomName] = useState('');
-  const [roomType, setRoomType] = useState('Private');
+  const [roomType, setRoomType] = useState('Public');
   const [maxPlayers, setMaxPlayers] = useState('4');
   const [battleTime, setBattleTime] = useState('10');
   const [aiQuiz, setAiQuiz] = useState({
@@ -30,12 +21,34 @@ const CreateBattle = () => {
     description: '',
     category: 'Programming',
     topic: '',
-    difficulty: 'Easy',
-    questionCount: '5',
+    difficulty: 'Medium',
+    questionCount: '',
     questionTypes: ['MCQ'],
   });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+
+  const selectedQuiz = quizzes.find((quiz) => quiz._id === quizId);
+  const quizTopic = source === 'ai'
+    ? aiQuiz.topic.trim() || aiQuiz.category
+    : selectedQuiz?.category?.name ||
+      selectedQuiz?.category ||
+      selectedQuiz?.topic ||
+      selectedQuiz?.title ||
+      'Choose a quiz';
+  const summaryDifficulty = source === 'ai'
+    ? aiQuiz.difficulty
+    : selectedQuiz?.difficulty || selectedQuiz?.level || 'Medium';
+  const summaryQuestionCount = source === 'ai'
+    ? Number.isInteger(Number(aiQuiz.questionCount)) &&
+      Number(aiQuiz.questionCount) >= 1 &&
+      Number(aiQuiz.questionCount) <= 30
+      ? aiQuiz.questionCount
+      : '—'
+    : selectedQuiz?.questions?.length ||
+      selectedQuiz?.questionCount ||
+      selectedQuiz?.questionsCount ||
+      '—';
 
   useEffect(() => {
     let active = true;
@@ -56,6 +69,41 @@ const CreateBattle = () => {
 
     return () => { active = false; };
   }, []);
+
+  const updateAiSettings = (updates) => {
+    if (source !== 'ai') {
+      const currentCategory = selectedQuiz?.category?.name || selectedQuiz?.category;
+      const supportedCategories = [
+        'Programming',
+        'Technology',
+        'Science',
+        'General Knowledge',
+        'Mathematics',
+        'History',
+      ];
+
+      setAiQuiz((current) => ({
+        ...current,
+        topic: selectedQuiz?.topic || selectedQuiz?.title || current.topic,
+        category: supportedCategories.includes(currentCategory)
+          ? currentCategory
+          : current.category,
+        ...updates,
+      }));
+      setSource('ai');
+      return;
+    }
+
+    setAiQuiz((current) => ({ ...current, ...updates }));
+  };
+
+  const adjustQuestionCount = (step) => {
+    const currentCount = Number(aiQuiz.questionCount);
+    const nextCount = Number.isInteger(currentCount)
+      ? Math.max(1, Math.min(30, currentCount + step))
+      : 1;
+    updateAiSettings({ questionCount: String(nextCount) });
+  };
 
   const toggleQuestionType = (type) => {
     setAiQuiz((current) => {
@@ -85,6 +133,16 @@ const CreateBattle = () => {
       return;
     }
 
+    if (
+      source === 'ai' &&
+      (!Number.isInteger(Number(aiQuiz.questionCount)) ||
+        Number(aiQuiz.questionCount) < 1 ||
+        Number(aiQuiz.questionCount) > 30)
+    ) {
+      setError('Number of questions must be between 1 and 30.');
+      return;
+    }
+
     const minutes = Number(battleTime);
     if (!Number.isInteger(minutes) || minutes < 1 || minutes > 180) {
       setError('Battle duration must be between 1 and 180 minutes.');
@@ -93,13 +151,11 @@ const CreateBattle = () => {
 
     setBusy(true);
     setError('');
-
     let createdRoomId;
 
     try {
       let selectedQuizId = quizId;
 
-      // Generate the quiz first, so a room is not created without a quiz.
       if (source === 'ai') {
         const generated = await apiRequest('/quiz/generate-ai', {
           method: 'POST',
@@ -122,7 +178,7 @@ const CreateBattle = () => {
         method: 'POST',
         body: jsonBody({
           gameMode: 'BATTLE',
-          roomName: roomName.trim() || 'QuizArena Battle',
+          roomName: 'QuizArena Battle',
           roomType,
           maxPlayers: Number(maxPlayers),
           timerMode: 'QUIZ',
@@ -135,7 +191,6 @@ const CreateBattle = () => {
         throw new Error(created.message || 'The server did not return a room ID.');
       }
 
-      // Select the quiz before sending the host to the waiting room.
       await apiRequest(`/room/${createdRoomId}/select-quiz`, {
         method: 'PUT',
         body: jsonBody({ quizId: selectedQuizId }),
@@ -150,7 +205,6 @@ const CreateBattle = () => {
       );
 
       if (createdRoomId) {
-        // Preserve access to the room if the second request failed.
         setTimeout(() => navigate(`/battle/${createdRoomId}`), 1800);
       }
     } finally {
@@ -159,292 +213,340 @@ const CreateBattle = () => {
   };
 
   return (
-    <PageFrame
-      eyebrow="BATTLE SETUP"
-      title="Create a battle"
-      description="Choose your quiz and set up the arena before inviting your players."
-    >
-      <div className="relative isolate mx-auto max-w-4xl overflow-hidden rounded-[28px] border border-[#063b49]/10 bg-white p-4 text-[#063b49] shadow-[0_24px_70px_rgba(6,59,73,0.10)] sm:p-7 lg:p-9">
-        <div className="pointer-events-none absolute -left-20 -top-20 -z-10 h-64 w-64 rounded-full bg-[#00d98b]/10 blur-[100px]" />
-        <div className="pointer-events-none absolute -right-20 top-32 -z-10 h-64 w-64 rounded-full bg-[#063b49]/5 blur-[100px]" />
+    <main className="create-battle-page min-h-screen px-4 pb-12 pt-6 text-[#f4f4f6] sm:px-6 sm:pt-8 lg:px-8 lg:pt-10">
+    <div className="mx-auto w-full max-w-[1180px]">
 
-        <button
-          type="button"
-          onClick={() => navigate('/battle')}
-          className="mb-6 inline-flex min-h-10 items-center gap-2 rounded-lg px-2 text-sm font-semibold text-slate-600 hover:bg-[#e8fff7] hover:text-[#063b49]"
+      {/* Page Heading */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold tracking-[-0.04em] sm:text-4xl lg:text-5xl">
+          Create a battle room
+        </h1>
+        <p className="mt-2 text-sm text-[#a2a4b1]">
+          Configure your quiz, invite players and get ready to compete.
+        </p>
+      </div>
+
+      {error && (
+        <div
+          className="mb-6 rounded-xl border border-rose-900 bg-[#21171b] px-4 py-3 text-sm text-rose-200"
+          role="alert"
         >
-          <ArrowLeft size={17} /> Back to live battles
-        </button>
+          {error}
+        </div>
+      )}
 
-        {error && <div className="mb-5"><Notice>{error}</Notice></div>}
+      <form
+        onSubmit={handleCreate}
+        className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(280px,0.85fr)] lg:gap-7"
+      >
 
-        <form onSubmit={handleCreate} className="space-y-6">
-          <section className="rounded-2xl border border-[#063b49]/10 bg-[#f7f9fb] p-5 sm:p-7">
-            <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#e8fff7] text-[#063b49]">
-                <BookOpen size={23} />
-              </div>
-              <div>
-                <h2 className="text-xl font-extrabold">Choose your quiz</h2>
-                <p className="mt-1 text-sm text-slate-600">Select from your library or create one with AI.</p>
-              </div>
-            </div>
+        {/* Left: Battle Configuration */}
+        <section className="create-battle-panel min-w-0 rounded-2xl border border-[#292b35] bg-[#17181f] p-5 sm:p-7 lg:p-8">
 
-            <div className="mt-6 grid gap-3 sm:grid-cols-2">
-              <button
-                type="button"
-                onClick={() => setSource('library')}
-                className={`rounded-xl border p-4 text-left transition ${
-                  source === 'library'
-                    ? 'border-[#00c982] bg-[#e8fff7]'
-                    : 'border-[#063b49]/10 bg-white hover:bg-[#e8fff7]/60'
-                }`}
-              >
-                <BookOpen className="mb-3 text-[#008b5e]" size={21} />
-                <p className="font-bold">Quiz library</p>
-                <p className="mt-1 text-xs text-slate-600">Use a published quiz from the database.</p>
-              </button>
+          <div className="mb-6">
+            <h2 className="text-xl font-bold">Battle settings</h2>
+            <p className="mt-1 text-xs text-[#a2a4b1]">
+              Choose your quiz and customize the battle.
+            </p>
+          </div>
 
-              <button
-                type="button"
-                onClick={() => setSource('ai')}
-                className={`rounded-xl border p-4 text-left transition ${
-                  source === 'ai'
-                    ? 'border-[#00c982] bg-[#e8fff7]'
-                    : 'border-[#063b49]/10 bg-white hover:bg-[#e8fff7]/60'
-                }`}
-              >
-                <Sparkles className="mb-3 text-[#008b5e]" size={21} />
-                <p className="font-bold">Generate with AI</p>
-                <p className="mt-1 text-xs text-slate-600">Create a quiz for your chosen topic.</p>
-              </button>
-            </div>
+          <label className="block text-sm font-semibold" htmlFor="quiz-source">
+            Quiz topic
+          </label>
 
-            <AnimatePresence mode="wait">
-              {source === 'library' ? (
-                <motion.div
-                  key="library"
-                  initial={reduceMotion ? false : { opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -5 }}
-                  className="mt-5"
-                >
-                  <label className="block text-sm font-semibold text-[#063b49]">
-                    Published quiz
-                    <select
-                      value={quizId}
-                      onChange={(event) => setQuizId(event.target.value)}
-                      disabled={loadingQuizzes || !quizzes.length}
-                      className={inputClass}
-                    >
-                      <option value="">
-                        {loadingQuizzes ? 'Loading quizzes…' : 'Choose a quiz'}
-                      </option>
-                      {quizzes.map((quiz) => (
-                        <option key={quiz._id} value={quiz._id}>
-                          {quiz.title}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+          <select
+            id="quiz-source"
+            value={source === 'ai' ? 'ai' : quizId}
+            onChange={(event) => {
+              if (event.target.value === 'ai') {
+                setSource('ai');
+                return;
+              }
+              setSource('library');
+              setQuizId(event.target.value);
+            }}
+            disabled={loadingQuizzes}
+            className="create-battle-select mt-2 h-12 w-full rounded-xl border border-[#343641] bg-[#101115] px-4 text-sm text-[#f4f4f6] outline-none focus:border-[#c4f52c]"
+          >
+            <option value="" disabled>
+              {loadingQuizzes ? 'Loading quizzes...' : 'Choose a quiz'}
+            </option>
 
-                  {!loadingQuizzes && !quizzes.length && (
-                    <p className="mt-3 text-sm text-amber-700">
-                      No quizzes are available. Switch to AI generation or publish a quiz first.
-                    </p>
-                  )}
+            {quizzes.map((quiz) => (
+              <option key={quiz._id} value={quiz._id}>
+                {quiz.category?.name || quiz.category || quiz.topic || quiz.title}
+                {quiz.title ? ` — ${quiz.title}` : ''}
+              </option>
+            ))}
 
-                  {quizzes.find((quiz) => quiz._id === quizId) && (
-                    <div className="mt-3 rounded-xl border border-[#063b49]/10 bg-white p-4">
-                      <p className="font-semibold">{quizzes.find((quiz) => quiz._id === quizId)?.title}</p>
-                      <p className="mt-1 text-sm text-slate-600">
-                        {quizzes.find((quiz) => quiz._id === quizId)?.description || 'Ready to use in your battle.'}
-                      </p>
-                    </div>
-                  )}
-                </motion.div>
-              ) : (
-                <motion.div
-                  key="ai"
-                  initial={reduceMotion ? false : { opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -5 }}
-                  className="mt-5 space-y-4"
-                >
-                  <label className="block text-sm font-semibold text-[#063b49]">
-                    Topic *
-                    <input
-                      value={aiQuiz.topic}
-                      onChange={(event) => setAiQuiz({ ...aiQuiz, topic: event.target.value })}
-                      required
-                      placeholder="e.g. JavaScript, DBMS, React"
-                      className={inputClass}
-                    />
-                  </label>
+            <option value="ai">Generate a quiz with AI</option>
+          </select>
 
-                  <label className="block text-sm font-semibold text-[#063b49]">
-                    Quiz title (optional)
-                    <input
-                      value={aiQuiz.title}
-                      onChange={(event) => setAiQuiz({ ...aiQuiz, title: event.target.value })}
-                      placeholder="e.g. JavaScript Showdown"
-                      className={inputClass}
-                    />
-                  </label>
-
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <label className="block text-sm font-semibold text-[#063b49]">
-                      Category
-                      <select
-                        value={aiQuiz.category}
-                        onChange={(event) => setAiQuiz({ ...aiQuiz, category: event.target.value })}
-                        className={inputClass}
-                      >
-                        {['Programming', 'Technology', 'Science', 'General Knowledge', 'Mathematics', 'History'].map((value) => (
-                          <option key={value} value={value}>{value}</option>
-                        ))}
-                      </select>
-                    </label>
-
-                    <label className="block text-sm font-semibold text-[#063b49]">
-                      Difficulty
-                      <select
-                        value={aiQuiz.difficulty}
-                        onChange={(event) => setAiQuiz({ ...aiQuiz, difficulty: event.target.value })}
-                        className={inputClass}
-                      >
-                        {['Easy', 'Medium', 'Difficult'].map((value) => (
-                          <option key={value} value={value}>{value}</option>
-                        ))}
-                      </select>
-                    </label>
-                  </div>
-
-                  <label className="block text-sm font-semibold text-[#063b49]">
-                    Number of questions
-                    <select
-                      value={aiQuiz.questionCount}
-                      onChange={(event) => setAiQuiz({ ...aiQuiz, questionCount: event.target.value })}
-                      className={inputClass}
-                    >
-                      {[5, 10, 15, 20].map((count) => (
-                        <option key={count} value={count}>{count} questions</option>
-                      ))}
-                    </select>
-                  </label>
-
-                  <div>
-                    <p className="text-sm font-semibold text-[#063b49]">Question types</p>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {['MCQ', 'TRUE_FALSE', 'FILL'].map((type) => {
-                        const active = aiQuiz.questionTypes.includes(type);
-                        return (
-                          <button
-                            key={type}
-                            type="button"
-                            onClick={() => toggleQuestionType(type)}
-                            className={`inline-flex min-h-10 items-center gap-2 rounded-xl border px-3 text-sm font-semibold transition ${
-                              active
-                                ? 'border-[#00c982] bg-[#e8fff7] text-[#063b49]'
-                                : 'border-[#063b49]/10 text-slate-600 hover:bg-white'
-                            }`}
-                          >
-                            {active && <Check size={14} />}
-                            {type === 'TRUE_FALSE' ? 'True / False' : type === 'FILL' ? 'Fill in the blank' : 'Multiple choice'}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </section>
-
-          <section className="rounded-2xl border border-[#063b49]/10 bg-[#f7f9fb] p-5 sm:p-7">
-            <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#e8fff7] text-[#063b49]">
-                <Swords size={23} />
-              </div>
-              <div>
-                <h2 className="text-xl font-extrabold">Battle settings</h2>
-                <p className="mt-1 text-sm text-slate-600">Set up your lobby before players join.</p>
-              </div>
-            </div>
-
-            <label className="mt-5 block text-sm font-semibold text-[#063b49]">
-              Room name
-              <input
-                value={roomName}
-                onChange={(event) => setRoomName(event.target.value)}
-                maxLength={60}
-                placeholder="Friday night showdown"
-                className={inputClass}
-              />
-            </label>
-
-            <div className="mt-5 grid gap-4 sm:grid-cols-2">
-              <label className="block text-sm font-semibold text-[#063b49]">
-                Room access
-                <select value={roomType} onChange={(event) => setRoomType(event.target.value)} className={inputClass}>
-                  <option value="Private">Private — invite only</option>
-                  <option value="Public">Public — open to players</option>
-                </select>
-                <span className="mt-2 flex items-center gap-1.5 text-xs font-normal text-slate-500">
-                  {roomType === 'Private' ? <LockKeyhole size={13} /> : <Users size={13} />}
-                  {roomType === 'Private' ? 'Share your room code.' : 'Your room will appear in the live list if the server supports public rooms.'}
-                </span>
+          {source === 'ai' && (
+            <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <label className="block text-sm font-semibold" htmlFor="ai-topic">
+                Topic
+                <input
+                  id="ai-topic"
+                  value={aiQuiz.topic}
+                  onChange={(event) =>
+                    setAiQuiz({ ...aiQuiz, topic: event.target.value })
+                  }
+                  required
+                  placeholder="e.g. Physics"
+                  className="create-battle-select mt-2 h-12 w-full rounded-xl border border-[#343641] bg-[#101115] px-4 text-sm text-[#f4f4f6] outline-none focus:border-[#c4f52c]"
+                />
               </label>
 
-              <label className="block text-sm font-semibold text-[#063b49]">
-                Player limit
-                <select value={maxPlayers} onChange={(event) => setMaxPlayers(event.target.value)} className={inputClass}>
-                  {[2, 3, 4, 5, 6, 8].map((count) => (
-                    <option key={count} value={count}>{count} players</option>
+              <label className="block text-sm font-semibold" htmlFor="ai-category">
+                Category
+                <select
+                  id="ai-category"
+                  value={aiQuiz.category}
+                  onChange={(event) =>
+                    setAiQuiz({ ...aiQuiz, category: event.target.value })
+                  }
+                  className="create-battle-select mt-2 h-12 w-full rounded-xl border border-[#343641] bg-[#101115] px-4 text-sm text-[#f4f4f6] outline-none focus:border-[#c4f52c]"
+                >
+                  {[
+                    'Programming',
+                    'Technology',
+                    'Science',
+                    'General Knowledge',
+                    'Mathematics',
+                    'History',
+                  ].map((category) => (
+                    <option key={category} value={category}>
+                      {category}
+                    </option>
                   ))}
                 </select>
               </label>
             </div>
+          )}
 
-            <label className="mt-5 block text-sm font-semibold text-[#063b49]">
-              Total battle duration
-              <span className="relative mt-2 block">
-                <Clock3 className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={17} />
+          {!loadingQuizzes && source === 'library' && quizzes.length === 0 && (
+            <p className="mt-3 text-sm text-amber-300">
+              No quizzes are available. Choose AI generation to create one.
+            </p>
+          )}
+
+          {/* Difficulty */}
+          <fieldset className="mt-7">
+            <legend className="text-sm font-semibold">Difficulty</legend>
+
+            <div className="mt-3 flex flex-wrap gap-3">
+              {['Easy', 'Medium', 'Hard'].map((difficulty) => (
+                <button
+                  key={difficulty}
+                  type="button"
+                  aria-pressed={aiQuiz.difficulty === difficulty}
+                  onClick={() => updateAiSettings({ difficulty })}
+                  className={`create-battle-choice rounded-full border px-5 py-2.5 text-sm font-semibold ${
+                    aiQuiz.difficulty === difficulty ? 'is-selected' : ''
+                  }`}
+                >
+                  {difficulty}
+                </button>
+              ))}
+            </div>
+          </fieldset>
+
+          {/* Question Count */}
+          <fieldset className="mt-7">
+            <legend className="text-sm font-semibold">
+              Number of questions
+            </legend>
+
+            <div className="create-battle-count-control mt-3 flex h-12 w-full max-w-[320px] items-stretch overflow-hidden rounded-xl border border-[#343641] bg-[#101115]">
+              <button
+                type="button"
+                aria-label="Decrease number of questions"
+                disabled={!aiQuiz.questionCount || Number(aiQuiz.questionCount) <= 1}
+                onClick={() => adjustQuestionCount(-1)}
+                className="create-battle-count-button flex w-12 shrink-0 items-center justify-center border-r border-[#343641] transition hover:bg-[#292b35] hover:text-[#c4f52c] disabled:opacity-40"
+              >
+                <Minus size={17} />
+              </button>
+
+              <input
+                id="question-count"
+                type="number"
+                min="1"
+                max="30"
+                step="1"
+                value={aiQuiz.questionCount}
+                onChange={(event) =>
+                  updateAiSettings({ questionCount: event.target.value })
+                }
+                placeholder="—"
+                aria-label="Number of questions"
+                className="create-battle-count-input h-full min-w-0 flex-1 border-0 bg-transparent px-4 text-center text-base font-semibold text-[#f4f4f6] outline-none focus:ring-0"
+              />
+
+              <button
+                type="button"
+                aria-label="Increase number of questions"
+                disabled={Number(aiQuiz.questionCount) >= 30}
+                onClick={() => adjustQuestionCount(1)}
+                className="create-battle-count-button flex w-12 shrink-0 items-center justify-center border-l border-[#343641] transition hover:bg-[#292b35] hover:text-[#c4f52c] disabled:opacity-40"
+              >
+                <Plus size={17} />
+              </button>
+            </div>
+
+            <p className="mt-2 text-xs text-[#a2a4b1]">
+              Enter a number or use + / − (1–30).
+            </p>
+          </fieldset>
+
+          {/* Room Type */}
+          <fieldset className="mt-7">
+            <legend className="text-sm font-semibold">Room type</legend>
+
+            <div className="mt-3 flex flex-wrap gap-3">
+              {['Public', 'Private'].map((type) => (
+                <button
+                  key={type}
+                  type="button"
+                  aria-pressed={roomType === type}
+                  onClick={() => setRoomType(type)}
+                  className={`create-battle-choice rounded-full border px-5 py-2.5 text-sm font-semibold ${
+                    roomType === type ? 'is-selected' : ''
+                  }`}
+                >
+                  {type}
+                </button>
+              ))}
+            </div>
+          </fieldset>
+
+          {/* Advanced Settings */}
+          <details className="create-battle-advanced mt-7 border-t border-[#292b35] pt-5">
+            <summary className="cursor-pointer text-sm font-semibold text-[#a2a4b1] hover:text-[#c4f52c]">
+              Advanced room settings
+            </summary>
+
+            <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <label className="text-sm font-semibold" htmlFor="player-limit">
+                Player limit
+                <select
+                  id="player-limit"
+                  value={maxPlayers}
+                  onChange={(event) => setMaxPlayers(event.target.value)}
+                  className="create-battle-select mt-2 h-12 w-full rounded-xl border border-[#343641] bg-[#101115] px-3 text-sm text-[#f4f4f6]"
+                >
+                  {[2, 3, 4, 5, 6, 8].map((count) => (
+                    <option key={count} value={count}>
+                      {count} players
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="text-sm font-semibold" htmlFor="battle-duration">
+                Duration (minutes)
                 <input
+                  id="battle-duration"
                   type="number"
                   min="1"
                   max="180"
                   required
                   value={battleTime}
                   onChange={(event) => setBattleTime(event.target.value)}
-                  className={`${inputClass} pl-11 pr-24`}
+                  className="create-battle-select mt-2 h-12 w-full rounded-xl border border-[#343641] bg-[#101115] px-3 text-sm text-[#f4f4f6]"
                 />
-                <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xs text-slate-500">
-                  minutes
-                </span>
-              </span>
-            </label>
-          </section>
+              </label>
 
-          <motion.button
-            whileHover={reduceMotion || busy ? undefined : { scale: 1.01 }}
-            whileTap={reduceMotion || busy ? undefined : { scale: 0.99 }}
+              {source === 'ai' && (
+                <div className="sm:col-span-2">
+                  <p className="text-sm font-semibold">Question types</p>
+
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {['MCQ', 'TRUE_FALSE', 'FILL'].map((type) => {
+                      const active = aiQuiz.questionTypes.includes(type);
+
+                      return (
+                        <button
+                          key={type}
+                          type="button"
+                          onClick={() => toggleQuestionType(type)}
+                          className={`create-battle-choice rounded-full border px-4 py-2 text-xs font-semibold ${
+                            active ? 'is-selected' : ''
+                          }`}
+                        >
+                          {active && (
+                            <Check className="mr-1 inline h-3.5 w-3.5" />
+                          )}
+                          {type === 'TRUE_FALSE'
+                            ? 'True / False'
+                            : type === 'FILL'
+                              ? 'Fill in the blank'
+                              : 'Multiple choice'}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          </details>
+
+          {/* Create Button */}
+          <button
             type="submit"
             disabled={busy || (source === 'library' && (loadingQuizzes || !quizId))}
-            className="inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-xl bg-[#063b49] px-5 text-sm font-extrabold text-white shadow-[0_8px_20px_rgba(6,59,73,0.18)] transition hover:bg-[#074757] disabled:cursor-not-allowed disabled:opacity-60"
+            className="create-battle-submit mt-7 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl px-6 text-sm font-bold disabled:cursor-not-allowed disabled:opacity-60"
           >
             {busy ? (
               <>
-                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                {source === 'ai' ? 'Preparing quiz and room…' : 'Creating your battle…'}
+                <LoaderCircle className="h-5 w-5 animate-spin" />
+                {source === 'ai'
+                  ? 'Preparing quiz and room...'
+                  : 'Creating room...'}
               </>
             ) : (
-              <>Create battle & open waiting room <ArrowRight size={18} /></>
+              'Create room'
             )}
-          </motion.button>
-        </form>
-      </div>
-    </PageFrame>
+          </button>
+        </section>
+
+        {/* Right: Room Summary */}
+        <aside className="create-battle-panel create-battle-summary min-w-0 rounded-2xl border border-[#292b35] bg-[#17181f] p-5 sm:p-7 lg:sticky lg:top-8 lg:p-8">
+          <h2 className="text-xl font-bold sm:text-2xl">
+            Room summary
+          </h2>
+
+          <p className="mt-1 text-xs text-[#a2a4b1]">
+            Review your battle configuration.
+          </p>
+
+          <dl className="mt-6">
+            {[
+              ['Topic', quizTopic],
+              ['Difficulty', summaryDifficulty],
+              ['Questions', summaryQuestionCount],
+              ['Type', roomType],
+            ].map(([label, value]) => (
+              <div
+                key={label}
+                className="create-battle-summary-row flex items-center justify-between gap-4 border-b border-[#292b35] py-5 last:border-b-0"
+              >
+                <dt className="shrink-0 text-sm text-[#a2a4b1]">
+                  {label}
+                </dt>
+
+                <dd className="min-w-0 max-w-[65%] truncate text-right text-sm font-bold">
+                  {value}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </aside>
+
+      </form>
+    </div>
+    </main>
   );
 };
 

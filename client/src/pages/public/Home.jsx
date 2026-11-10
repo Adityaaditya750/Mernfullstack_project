@@ -1,1308 +1,476 @@
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
-
 import {
   ArrowRight,
-  Brain,
-  CheckCircle2,
+  BarChart3,
+  BookOpen,
   Code2,
-  Crown,
-  Layers3,
-  ShieldCheck,
-  Swords,
-  Target,
-  Trophy,
+  Plus,
+  Users,
   Zap,
 } from 'lucide-react';
-
 import { useAuth } from '../../context/AuthContext';
+
+const subjects = ['Science', 'Commerce', 'Arts', 'Maths', 'Computer Science'];
 
 const Home = () => {
   const { user } = useAuth();
 
-  const features = [
-    {
-      icon: Brain,
-      title: 'Take Quizzes',
-      description:
-        'Challenge yourself with quizzes covering programming, databases, web development, AI and many more topics.',
-    },
-    {
-      icon: Swords,
-      title: 'Real-Time Battles',
-      description:
-        'Create or join a battle room and compete against other players in real time.',
-    },
-    {
-      icon: Code2,
-      title: 'Coding Challenges',
-      description:
-        'Solve coding problems and test your programming skills against different challenges.',
-    },
-  ];
-
-  const arenaItems = [
-    {
-      icon: Brain,
-      title: 'Quiz Arena',
-      description: 'Test your knowledge',
-    },
-    {
-      icon: Swords,
-      title: 'Battle Mode',
-      description: 'Compete in real time',
-    },
-    {
-      icon: Code2,
-      title: 'Coding',
-      description: 'Solve coding problems',
-    },
-    {
-      icon: Trophy,
-      title: 'Results',
-      description: 'Track your performance',
-    },
-  ];
-
   return (
-    <main className="relative min-h-screen w-full overflow-x-hidden bg-[#f7f9fb]">
-      {/* =========================================================
-          BACKGROUND
-      ========================================================== */}
-
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        {/* Left green glow */}
-        <motion.div
-          className="
-            absolute
-            -left-32
-            top-20
-            h-64
-            w-64
-            rounded-full
-            bg-[#00d98b]/10
-            blur-3xl
-            sm:h-80
-            sm:w-80
-            lg:h-[420px]
-            lg:w-[420px]
-          "
-          animate={{
-            x: [0, 35, 0],
-            y: [0, 25, 0],
-          }}
-          transition={{
-            duration: 9,
-            repeat: Infinity,
-            ease: 'easeInOut',
-          }}
-        />
-
-        {/* Right dark glow */}
-        <motion.div
-          className="
-            absolute
-            -right-32
-            top-[35%]
-            h-64
-            w-64
-            rounded-full
-            bg-[#063b49]/10
-            blur-3xl
-            sm:h-80
-            sm:w-80
-            lg:h-[450px]
-            lg:w-[450px]
-          "
-          animate={{
-            x: [0, -30, 0],
-            y: [0, -25, 0],
-          }}
-          transition={{
-            duration: 11,
-            repeat: Infinity,
-            ease: 'easeInOut',
-          }}
-        />
-
-        {/* Decorative dot */}
-        <motion.div
-          className="
-            absolute
-            right-[12%]
-            top-[18%]
-            h-2
-            w-2
-            rounded-full
-            bg-[#00d98b]
-          "
-          animate={{
-            opacity: [0.3, 1, 0.3],
-            scale: [0.8, 1.2, 0.8],
-          }}
-          transition={{
-            duration: 2.5,
-            repeat: Infinity,
-          }}
-        />
-
-        {/* Decorative dot */}
-        <motion.div
-          className="
-            absolute
-            left-[10%]
-            top-[55%]
-            h-1.5
-            w-1.5
-            rounded-full
-            bg-[#00d98b]/70
-          "
-          animate={{
-            y: [0, -12, 0],
-            opacity: [0.3, 1, 0.3],
-          }}
-          transition={{
-            duration: 3,
-            repeat: Infinity,
-          }}
-        />
-      </div>
-
-      {/* =========================================================
-          PAGE WRAPPER
-      ========================================================== */}
-
-      <div className="relative mx-auto w-full max-w-[2560px]">
-        {/* =======================================================
-            HERO
-        ======================================================== */}
-
-        <section
-          className="
-            mx-auto
-            grid
-            w-full
-            max-w-[1700px]
-            grid-cols-1
-            items-center
-            gap-10
-            px-4
-            pb-16
-            pt-24
-
-            sm:gap-12
-            sm:px-6
-            sm:pb-20
-            sm:pt-28
-
-            md:px-8
-            md:pt-32
-
-            lg:grid-cols-2
-            lg:gap-12
-            lg:px-12
-            lg:pb-24
-            lg:pt-28
-
-            xl:gap-20
-            xl:px-16
-
-            2xl:px-20
-          "
-        >
-          {/* =====================================================
-              LEFT SIDE
-          ====================================================== */}
-
-          <motion.div
-            initial={{
-              opacity: 0,
-              y: 30,
-            }}
-            animate={{
-              opacity: 1,
-              y: 0,
-            }}
-            transition={{
-              duration: 0.7,
-            }}
-            className="
-              min-w-0
-              w-full
-              text-center
-              lg:text-left
-            "
-          >
-            {/* Badge */}
-
-            <motion.div
-              initial={{
-                opacity: 0,
-                scale: 0.9,
-              }}
-              animate={{
-                opacity: 1,
-                scale: 1,
-              }}
-              transition={{
-                delay: 0.15,
-                duration: 0.5,
-              }}
-              className="
-                mx-auto
-                inline-flex
-                max-w-full
-                items-center
-                gap-2
-                rounded-full
-                border
-                border-[#00d98b]/40
-                bg-white
-                px-3
-                py-2
-                text-xs
-                font-semibold
-                text-[#063b49]
-                shadow-sm
-
-                sm:px-4
-                sm:text-sm
-
-                lg:mx-0
-              "
-            >
-              <span className="relative flex h-2 w-2 shrink-0">
-                <span
-                  className="
-                    absolute
-                    inline-flex
-                    h-full
-                    w-full
-                    animate-ping
-                    rounded-full
-                    bg-[#00d98b]
-                    opacity-60
-                  "
-                />
-
-                <span
-                  className="
-                    relative
-                    inline-flex
-                    h-2
-                    w-2
-                    rounded-full
-                    bg-[#00d98b]
-                  "
-                />
-              </span>
-
-              <span className="truncate">
-                Welcome to Quiz Arena
-              </span>
-            </motion.div>
-
-            {/* Heading */}
-
-            <motion.h1
-              initial={{
-                opacity: 0,
-                y: 25,
-              }}
-              animate={{
-                opacity: 1,
-                y: 0,
-              }}
-              transition={{
-                delay: 0.25,
-                duration: 0.7,
-              }}
-              className="
-                mx-auto
-                mt-6
-                w-full
-                max-w-[1000px]
-                text-[clamp(2.45rem,8vw,5.8rem)]
-                font-extrabold
-                leading-[0.97]
-                tracking-[-0.045em]
-                text-[#063b49]
-
-                sm:mt-7
-
-                lg:mx-0
-              "
-            >
-              Compete.
-              <br />
-
-              <span className="relative inline-block px-2 text-[#00d98b] sm:px-3">
-                Learn.
-
-                <motion.span
-                  initial={{
-                    width: 0,
-                  }}
-                  animate={{
-                    width: '100%',
-                  }}
-                  transition={{
-                    delay: 0.8,
-                    duration: 0.7,
-                  }}
-                  className="
-                    absolute
-                    bottom-[-5px]
-                    left-0
-                    h-[3px]
-                    rounded-full
-                    bg-[#00d98b]
-
-                    sm:bottom-[-7px]
-                  "
-                />
-              </span>
-
-              <br />
-
-              <p className="pt-px">
-                Win Together.
-              </p>
-            </motion.h1>
-
-            {/* Description */}
-
-            <motion.p
-              initial={{
-                opacity: 0,
-                y: 20,
-              }}
-              animate={{
-                opacity: 1,
-                y: 0,
-              }}
-              transition={{
-                delay: 0.45,
-                duration: 0.7,
-              }}
-              className="
-                mx-auto
-                mt-6
-                w-full
-                max-w-[620px]
-                text-[clamp(0.95rem,2.4vw,1.2rem)]
-                leading-7
-                text-slate-600
-
-                sm:mt-7
-                sm:leading-8
-
-                lg:mx-0
-              "
-            >
-              Test your knowledge, challenge your friends,
-              solve coding problems and compete in real-time
-              quiz battles.
-            </motion.p>
-
-            {/* Buttons */}
-
-            <motion.div
-              initial={{
-                opacity: 0,
-                y: 20,
-              }}
-              animate={{
-                opacity: 1,
-                y: 0,
-              }}
-              transition={{
-                delay: 0.6,
-                duration: 0.7,
-              }}
-              className="
-                mx-auto
-                mt-7
-                flex
-                w-full
-                max-w-[520px]
-                flex-col
-                gap-3
-
-                sm:mt-8
-                sm:flex-row
-
-                lg:mx-0
-              "
-            >
-              {user ? (
-                <Link
-                  to={user.role === 'admin' ? '/admin' : '/profile'}
-                  className="
-                    group
-                    flex
-                    min-h-12
-                    w-full
-                    items-center
-                    justify-center
-                    gap-2
-                    rounded-2xl
-                    bg-[#00d98b]
-                    px-6
-                    py-3
-                    text-base
-                    font-semibold
-                    text-[#063b49]
-                    shadow-lg
-                    shadow-[#00d98b]/20
-                    transition-all
-                    duration-300
-                    hover:-translate-y-1
-                    hover:shadow-xl
-                  "
-                >
-                  {user.role === 'admin' ? 'Admin Dashboard' : 'Go to Dashboard'}
-
-                  <ArrowRight
-                    className="
-                      h-5
-                      w-5
-                      transition-transform
-                      duration-300
-                      group-hover:translate-x-1
-                    "
-                  />
-                </Link>
-              ) : (
-                <>
-                  <Link
-                    to="/register"
-                    className="
-                      group
-                      flex
-                      min-h-12
-                      w-full
-                      items-center
-                      justify-center
-                      gap-2
-                      rounded-2xl
-                      bg-[#00d98b]
-                      px-6
-                      py-3
-                      text-base
-                      font-semibold
-                      text-[#063b49]
-                      shadow-lg
-                      shadow-[#00d98b]/20
-                      transition-all
-                      duration-300
-                      hover:-translate-y-1
-                      hover:shadow-xl
-                    "
-                  >
-                    Get Started
-
-                    <ArrowRight
-                      className="
-                        h-5
-                        w-5
-                        transition-transform
-                        duration-300
-                        group-hover:translate-x-1
-                      "
-                    />
-                  </Link>
-
-                  <Link
-                    to="/login"
-                    className="
-                      flex
-                      min-h-12
-                      w-full
-                      items-center
-                      justify-center
-                      rounded-2xl
-                      border
-                      border-[#063b49]/20
-                      bg-white
-                      px-6
-                      py-3
-                      text-base
-                      font-semibold
-                      text-[#063b49]
-                      transition-all
-                      duration-300
-                      hover:-translate-y-1
-                      hover:border-[#063b49]
-                      hover:shadow-md
-                    "
-                  >
-                    Login
-                  </Link>
-                </>
-              )}
-            </motion.div>
-          </motion.div>
-
-          {/* =====================================================
-              RIGHT SIDE — QUIZ ARENA VISUAL
-          ====================================================== */}
-
-<motion.div
-  initial={{
-    opacity: 0,
-    scale: 0.94,
-    y: 20,
-  }}
-  animate={{
-    opacity: 1,
-    scale: 1,
-    y: 0,
-  }}
-  transition={{
-    delay: 0.35,
-    duration: 0.8,
-  }}
-  className="
-    relative
-    flex
-    min-h-[400px]
-    w-full
-    items-center
-    justify-center
-    px-0
-
-    sm:min-h-[470px]
-
-    lg:min-h-[540px]
-  "
->
-  {/* Outer glow */}
-
-  <motion.div
-    animate={{
-      scale: [1, 1.05, 1],
-      opacity: [0.25, 0.45, 0.25],
-    }}
-    transition={{
-      duration: 5,
-      repeat: Infinity,
-      ease: 'easeInOut',
-    }}
-    className="
-      absolute
-      h-[260px]
-      w-[260px]
-      rounded-full
-      bg-[#00d98b]/10
-      blur-3xl
-
-      sm:h-[350px]
-      sm:w-[350px]
-
-      lg:h-[450px]
-      lg:w-[450px]
-    "
-  />
-
-  {/* Outer rotating circle */}
-
-  <motion.div
-    animate={{
-      rotate: 360,
-    }}
-    transition={{
-      duration: 24,
-      repeat: Infinity,
-      ease: 'linear',
-    }}
-    className="
-      absolute
-      h-[290px]
-      w-[290px]
-      rounded-full
-      border
-      border-[#00d98b]/20
-
-      sm:h-[390px]
-      sm:w-[390px]
-
-      lg:h-[470px]
-      lg:w-[470px]
-    "
-  />
-
-  {/* Inner rotating circle */}
-
-  <motion.div
-    animate={{
-      rotate: -360,
-    }}
-    transition={{
-      duration: 30,
-      repeat: Infinity,
-      ease: 'linear',
-    }}
-    className="
-      absolute
-      h-[220px]
-      w-[220px]
-      rounded-full
-      border
-      border-[#063b49]/10
-
-      sm:h-[310px]
-      sm:w-[310px]
-
-      lg:h-[390px]
-      lg:w-[390px]
-    "
-  />
-
-  {/* =================================================
-      QUIZ ARENA CARD
-  ================================================== */}
-
-  <motion.div
-    animate={{
-      y: [0, -8, 0],
-    }}
-    transition={{
-      duration: 5,
-      repeat: Infinity,
-      ease: 'easeInOut',
-    }}
-    className="
-      relative
-      z-10
-
-      w-full
-      max-w-none
-
-      overflow-hidden
-      rounded-[28px]
-      border
-      border-slate-200
-      bg-white
-
-      shadow-2xl
-      shadow-[#063b49]/10
-
-      lg:max-w-[500px]
-    "
-  >
-    {/* Header */}
-
-    <div
-      className="
-        flex
-        items-center
-        justify-between
-        border-b
-        border-slate-100
-        px-4
-        py-4
-
-        sm:px-6
-      "
-    >
-      <div className="flex min-w-0 items-center gap-3">
-        <div
-          className="
-            flex
-            h-10
-            w-10
-            shrink-0
-            items-center
-            justify-center
-            rounded-xl
-            bg-[#e8fff7]
-          "
-        >
-          <Brain className="h-5 w-5 text-[#063b49]" />
-        </div>
-
+    <main className="min-h-screen overflow-hidden bg-[#0b0c10] text-[#f4f4f6]">
+      {/* Hero Section */}
+      <section className="mx-auto grid min-h-[430px] max-w-[1400px] min-w-0 items-center gap-12 px-5 pb-16 pt-24 sm:px-8 sm:pt-28 md:grid-cols-2 md:gap-8 md:px-6 md:pb-10 md:pt-24 lg:min-h-[980px] lg:items-start lg:gap-16 lg:px-0 lg:pb-10 lg:pt-[170px]">
         <div className="min-w-0">
-          <p className="text-sm font-bold text-[#063b49]">
-            QuizArena
+          <div className="inline-flex items-center gap-2 rounded-full border border-[#272930] bg-[#121318] px-3 py-1.5 text-[11px] font-medium text-[#e2e3e7] lg:gap-2.5 lg:px-4 lg:py-2.5 lg:text-base">
+            <span className="h-2 w-2 rounded-full bg-[#c4f52c] shadow-[0_0_10px_#c4f52c]" />
+            Live multiplayer battles are here
+            <ArrowRight className="ml-1 h-3 w-3" />
+          </div>
+
+          <h1 className="mt-5 text-4xl font-bold leading-[1.05] tracking-[-0.045em] md:text-[40px] lg:mt-8 lg:text-[clamp(3rem,4.4vw,5rem)]">
+            Learn faster.
+            <br />
+            <span className="text-[#c4f52c]">Win together.</span>
+          </h1>
+
+          <p className="mt-4 max-w-md text-sm leading-[1.65] text-[#a2a4b1] lg:mt-6 lg:max-w-[610px] lg:text-[22px] lg:leading-[1.6]">
+            Practise quizzes in every subject, challenge friends in real-time
+            battles and track your progress, all in one place.
           </p>
 
-          <p className="truncate text-xs text-slate-400">
-            Your challenge starts here
-          </p>
-        </div>
-      </div>
-
-      <div
-        className="
-          flex
-          h-9
-          w-9
-          shrink-0
-          items-center
-          justify-center
-          rounded-xl
-          bg-[#063b49]
-        "
-      >
-        <Zap className="h-4 w-4 text-[#00d98b]" />
-      </div>
-    </div>
-
-    {/* Content */}
-
-    <div className="p-5 sm:p-7">
-      <div className="mb-6">
-        <p
-          className="
-            text-xs
-            font-semibold
-            uppercase
-            tracking-[0.18em]
-            text-[#00a96f]
-          "
-        >
-          Explore
-        </p>
-
-        <h2
-          className="
-            mt-2
-            text-2xl
-            font-bold
-            tracking-tight
-            text-[#063b49]
-
-            sm:text-3xl
-          "
-        >
-          Choose your challenge
-        </h2>
-
-        <p
-          className="
-            mt-2
-            max-w-md
-            text-sm
-            leading-6
-            text-slate-500
-          "
-        >
-          Learn new concepts, test your skills and compete
-          whenever you are ready.
-        </p>
-      </div>
-
-      {/* Arena options */}
-
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {arenaItems.map((item, index) => {
-          const Icon = item.icon;
-
-          return (
-            <motion.div
-              key={item.title}
-              initial={{
-                opacity: 0,
-                y: 12,
-              }}
-              animate={{
-                opacity: 1,
-                y: 0,
-              }}
-              transition={{
-                delay: 0.55 + index * 0.08,
-                duration: 0.45,
-              }}
-              whileHover={{
-                y: -3,
-              }}
-              className="
-                group
-                min-w-0
-                rounded-2xl
-                border
-                border-slate-200
-                bg-slate-50/80
-                p-4
-                transition-all
-                duration-300
-
-                hover:border-[#00d98b]/40
-                hover:bg-[#e8fff7]/50
-                hover:shadow-md
-              "
+          <div className="mt-5 flex flex-wrap gap-2 lg:mt-9 lg:gap-3">
+            <Link
+              to={user ? '/quizzes' : '/register'}
+              className="inline-flex h-9 items-center gap-2 rounded-lg bg-[#c4f52c] px-3.5 text-[11px] font-semibold text-[#101109] transition hover:bg-[#d2ff43] lg:h-14 lg:gap-3 lg:rounded-xl lg:px-7 lg:text-base"
             >
+              Start practising <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+
+            <Link
+              to={user ? '/battle/create' : '/register'}
+              className="inline-flex h-9 items-center rounded-lg border border-[#24262d] px-3.5 text-[11px] font-semibold text-[#f4f4f6] transition hover:border-[#c4f52c] hover:text-[#c4f52c] lg:h-14 lg:rounded-xl lg:px-7 lg:text-base"
+            >
+              Create a battle room
+            </Link>
+          </div>
+
+          <div className="mt-5 flex max-w-[510px] flex-wrap items-center gap-1.5 lg:mt-10 lg:gap-2">
+            <span className="mr-1 text-[10px] text-[#a2a4b1] lg:text-base">
+              Built for every stream
+            </span>
+
+            {subjects.map((subject) => (
+              <span
+                key={subject}
+                className="rounded-full border border-[#24262d] px-2.5 py-1 text-[9px] text-[#a2a4b1] lg:px-4 lg:py-2 lg:text-sm"
+              >
+                {subject}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {/* Battle Preview */}
+        <div className="relative mx-auto w-full min-w-0 max-w-[410px] px-1 py-8 sm:px-0 sm:py-8 lg:mt-[68px] lg:max-w-[680px]">
+          <div className="rounded-2xl border border-[#22242b] bg-[#14151b] p-5 shadow-[0_20px_70px_rgba(0,0,0,0.35)] sm:p-6 lg:rounded-[24px] lg:p-8">
+            <h2 className="mb-4 text-xs font-bold lg:mb-7 lg:text-2xl">Physics Showdown</h2>
+
+            {[
+              ['You', '90', 'w-[92%]', true],
+              ['Player 3', '70', 'w-[72%]', false],
+              ['Player 2', '60', 'w-[62%]', false],
+              ['Player 4', '40', 'w-[42%]', false],
+            ].map(([name, score, width, isUser], index) => (
               <div
-                className="
-                  flex
-                  items-start
-                  justify-between
-                  gap-3
-                "
+                key={name}
+                className="mb-3 flex items-center gap-2.5 last:mb-0 lg:mb-6 lg:gap-4"
               >
-                <div
-                  className="
-                    flex
-                    h-10
-                    w-10
-                    shrink-0
-                    items-center
-                    justify-center
-                    rounded-xl
-                    bg-white
-                    shadow-sm
-                    ring-1
-                    ring-slate-100
-                    transition-colors
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#252731] text-[9px] font-semibold text-[#e2e3e7] lg:h-10 lg:w-10 lg:text-base">
+                  {index === 0 ? 'Y' : 'P'}
+                </span>
 
-                    group-hover:bg-[#00d98b]
-                  "
-                >
-                  <Icon
-                    className="
-                      h-5
-                      w-5
-                      text-[#063b49]
-                    "
+                <span className="w-[70px] shrink-0 text-[10px] text-[#d9dae0] lg:w-[86px] lg:text-base">
+                  {name}
+                </span>
+
+                <span className="h-1 flex-1 overflow-hidden rounded-full bg-[#292b35] lg:h-2.5">
+                  <span
+                    className={`block h-full rounded-full ${width} ${
+                      isUser ? 'bg-[#c4f52c]' : 'bg-[#575b70]'
+                    }`}
                   />
-                </div>
+                </span>
 
-                <ArrowRight
-                  className="
-                    h-4
-                    w-4
-                    shrink-0
-                    text-slate-300
-                    transition-all
-                    duration-300
-
-                    group-hover:translate-x-1
-                    group-hover:text-[#063b49]
-                  "
-                />
+                <span className="w-6 text-right text-[10px] font-semibold text-[#d9dae0] lg:w-9 lg:text-base">
+                  {score}
+                </span>
               </div>
+            ))}
+          </div>
 
-              <h3
-                className="
-                  mt-4
-                  text-sm
-                  font-bold
-                  text-[#063b49]
-                "
-              >
-                {item.title}
-              </h3>
-
-              <p
-                className="
-                  mt-1
-                  text-xs
-                  leading-5
-                  text-slate-500
-                "
-              >
-                {item.description}
-              </p>
-            </motion.div>
-          );
-        })}
-      </div>
-
-      {/* Bottom message */}
-
-      <div
-        className="
-          mt-5
-          flex
-          items-center
-          gap-3
-          rounded-2xl
-          border
-          border-[#00d98b]/20
-          bg-[#e8fff7]/60
-          px-4
-          py-3
-        "
-      >
-        <div
-          className="
-            flex
-            h-8
-            w-8
-            shrink-0
-            items-center
-            justify-center
-            rounded-lg
-            bg-white
-          "
-        >
-          <Target className="h-4 w-4 text-[#063b49]" />
-        </div>
-
-        <p
-          className="
-            text-xs
-            font-medium
-            leading-5
-            text-[#063b49]
-          "
-        >
-          Improve your skills one challenge at a time.
-        </p>
-
-        <CheckCircle2
-          className="
-            ml-auto
-            h-4
-            w-4
-            shrink-0
-            text-[#00a96f]
-          "
-        />
-      </div>
-    </div>
-  </motion.div>
-</motion.div>
-        </section>
-
-        {/* =========================================================
-            FEATURES
-        ========================================================== */}
-
-        <section
-          className="
-            mx-auto
-            w-full
-            max-w-[1700px]
-            px-4
-            py-16
-
-            sm:px-6
-            sm:py-20
-
-            md:px-8
-
-            lg:px-12
-
-            xl:px-16
-
-            2xl:px-20
-          "
-        >
-          {/* Section heading */}
-
-          <motion.div
-            initial={{
-              opacity: 0,
-              y: 25,
-            }}
-            whileInView={{
-              opacity: 1,
-              y: 0,
-            }}
-            viewport={{
-              once: true,
-              amount: 0.2,
-            }}
-            transition={{
-              duration: 0.6,
-            }}
-            className="
-              mx-auto
-              w-full
-              max-w-2xl
-              text-center
-            "
-          >
-            <div
-              className="
-                mx-auto
-                flex
-                w-fit
-                items-center
-                gap-2
-                rounded-full
-                bg-[#e8fff7]
-                px-3
-                py-1.5
-                text-xs
-                font-semibold
-                text-[#063b49]
-              "
-            >
-              <Layers3 className="h-3.5 w-3.5" />
-
-              Everything you need
+          {/* Quiz Notification */}
+          <div className="absolute right-0 top-0 flex items-center gap-3 rounded-2xl border border-[#24262d] bg-[#17181f] px-3 py-3 shadow-xl lg:-right-3 lg:-top-3 lg:gap-5 lg:px-6 lg:py-6">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full border-[3px] border-[#c4f52c] text-[10px] font-bold lg:h-[72px] lg:w-[72px] lg:text-xl">
+              8/10
             </div>
 
-            <h2
-              className="
-                mt-5
-                text-[clamp(1.8rem,5vw,3rem)]
-                font-bold
-                leading-tight
-                tracking-tight
-                text-[#063b49]
-              "
-            >
-              One platform.
+            <div className="text-[9px] leading-4 text-[#a2a4b1] lg:text-base lg:leading-6">
+              <strong className="block text-[#f4f4f6]">Quiz complete</strong>
+              DBMS
               <br />
+              Basics
+            </div>
+          </div>
 
-              <span className="text-[#00d98b]">
-                Endless challenges.
+          {/* Friend Notification */}
+          <div className="absolute bottom-0 left-0 flex max-w-[calc(100%-12px)] items-center gap-2 rounded-xl border border-[#24262d] bg-[#17181f] px-3 py-2.5 shadow-xl lg:-left-5 lg:gap-4 lg:rounded-2xl lg:px-6 lg:py-5">
+            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#c4f52c] text-[9px] font-bold text-[#101109] lg:h-10 lg:w-10 lg:text-base">
+              U
+            </span>
+
+            <div className="text-[9px] leading-4 text-[#e2e3e7] lg:text-base lg:leading-6">
+              @username accepted your request
+              <span className="block font-semibold text-[#c4f52c]">
+                Invite to battle
               </span>
-            </h2>
+            </div>
+          </div>
+        </div>
+      </section>
 
-            <p
-              className="
-                mt-4
-                text-sm
-                leading-6
-                text-slate-600
+      {/* Platform Section */}
+      <section className="mx-auto max-w-[1400px] px-6 pb-14 pt-8 sm:px-8 md:px-[42px] lg:px-0 lg:pb-20 lg:pt-12">
+        <div className="mx-auto max-w-4xl text-center">
+          <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#c4f52c] lg:text-base">
+            The platform
+          </span>
 
-                sm:text-base
-                sm:leading-7
-              "
-            >
-              Learn, compete and improve your skills with everything
-              QuizArena has to offer.
+          <h2 className="mt-2 text-2xl font-bold leading-tight tracking-[-0.035em] sm:text-[28px] lg:mt-4 lg:text-[52px]">
+            Everything students need to
+            <br className="hidden sm:block" /> practise, compete and improve
+          </h2>
+
+          <p className="mt-2 text-xs leading-5 text-[#a2a4b1] lg:mt-4 lg:text-xl lg:leading-7">
+            One platform for quizzes, multiplayer battles, friends and coding
+            practice.
+          </p>
+        </div>
+
+        <div className="mt-8 grid gap-3 sm:grid-cols-[1.4fr_1fr] lg:mt-16 lg:gap-6">
+          {/* Quiz Library */}
+          <article className="rounded-xl border border-[#24262d] bg-[#14151b] p-4 sm:p-5 lg:rounded-[24px] lg:p-9">
+            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#1d1f27] text-[#c4f52c] lg:h-14 lg:w-14">
+              <BookOpen className="h-3.5 w-3.5 lg:h-7 lg:w-7" />
+            </span>
+
+            <h3 className="mt-3 text-sm font-bold lg:mt-7 lg:text-[28px]">Quiz Library</h3>
+
+            <p className="mt-1.5 text-[10px] leading-4 text-[#a2a4b1] lg:mt-3 lg:text-lg lg:leading-7">
+              Explore quizzes by subject, topic and difficulty, then see your
+              score and answers straight away.
             </p>
-          </motion.div>
 
-          {/* Feature cards */}
-
-          <div
-            className="
-              mt-10
-              grid
-              grid-cols-1
-              gap-5
-
-              sm:mt-12
-              sm:grid-cols-2
-
-              lg:grid-cols-3
-              lg:gap-6
-            "
-          >
-            {features.map((feature, index) => {
-              const Icon = feature.icon;
-
-              return (
-                <motion.div
-                  key={feature.title}
-                  initial={{
-                    opacity: 0,
-                    y: 25,
-                  }}
-                  whileInView={{
-                    opacity: 1,
-                    y: 0,
-                  }}
-                  viewport={{
-                    once: true,
-                    amount: 0.2,
-                  }}
-                  transition={{
-                    delay: index * 0.1,
-                    duration: 0.5,
-                  }}
-                  whileHover={{
-                    y: -6,
-                  }}
-                  className="
-                    w-full
-                    rounded-3xl
-                    border
-                    border-slate-200
-                    bg-white
-                    p-6
-                    shadow-sm
-                    transition-shadow
-                    hover:shadow-xl
-
-                    sm:p-7
-                  "
+            <div className="mt-3 flex flex-wrap gap-1.5 lg:mt-6 lg:gap-2">
+              {['All', 'Science', 'Commerce', 'Arts'].map((subject, index) => (
+                <span
+                  key={subject}
+                  className={`rounded-full border px-2.5 py-1 text-[9px] lg:px-4 lg:py-2 lg:text-sm ${
+                    index === 0
+                      ? 'border-[#c4f52c] bg-[#c4f52c] font-semibold text-[#101109]'
+                      : 'border-[#292b35] text-[#a2a4b1]'
+                  }`}
                 >
-                  <div
-                    className="
-                      flex
-                      h-12
-                      w-12
-                      items-center
-                      justify-center
-                      rounded-2xl
-                      bg-[#e8fff7]
-                    "
-                  >
-                    <Icon className="h-6 w-6 text-[#063b49]" />
+                  {subject}
+                </span>
+              ))}
+            </div>
+
+            <div className="mt-2 border-t border-[#24262d] lg:mt-3">
+              {[
+                ['Newton’s Laws', 'Physics · Easy'],
+                ['DBMS Basics', 'Computer Science · Medium'],
+              ].map(([title, detail]) => (
+                <div
+                  key={title}
+                  className="flex items-center justify-between gap-2 border-b border-[#24262d] py-2 last:border-0 lg:py-4"
+                >
+                  <div className="min-w-0">
+                    <p className="text-[9px] font-semibold lg:text-base">{title}</p>
+                    <p className="text-[9px] text-[#a2a4b1] lg:text-sm">{detail}</p>
                   </div>
 
-                  <h3
-                    className="
-                      mt-5
-                      text-lg
-                      font-bold
-                      text-[#063b49]
-                    "
+                  <Link
+                    to={user ? '/quizzes' : '/login'}
+                    className="shrink-0 rounded-lg border border-[#292b35] px-2.5 py-1 text-[9px] font-semibold hover:border-[#c4f52c] lg:px-5 lg:py-2.5 lg:text-sm"
                   >
-                    {feature.title}
-                  </h3>
+                    Start
+                  </Link>
+                </div>
+              ))}
+            </div>
+          </article>
 
-                  <p
-                    className="
-                      mt-2
-                      text-sm
-                      leading-6
-                      text-slate-600
-                    "
-                  >
-                    {feature.description}
-                  </p>
-                </motion.div>
-              );
-            })}
-          </div>
-        </section>
+          {/* Battle Rooms */}
+          <article className="rounded-xl border border-[#24262d] bg-[#14151b] p-4 sm:p-5 lg:rounded-[24px] lg:p-9">
+            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#1d1f27] text-[#c4f52c] lg:h-14 lg:w-14">
+              <Zap className="h-3.5 w-3.5 lg:h-7 lg:w-7" />
+            </span>
 
-        {/* =========================================================
-            CTA
-        ========================================================== */}
+            <h3 className="mt-3 text-sm font-bold lg:mt-7 lg:text-[28px]">Battle Rooms</h3>
 
-        {!user && (
-          <section
-            className="
-              mx-auto
-              w-full
-              max-w-[1700px]
-              px-4
-              pb-16
+            <p className="mt-1.5 text-[10px] leading-4 text-[#a2a4b1] lg:mt-3 lg:text-lg lg:leading-7">
+              Host a room, choose the setup and compete on the same questions.
+            </p>
 
-              sm:px-6
-              sm:pb-20
+            <div className="mt-4 text-[10px] lg:mt-7 lg:text-base">
+              {[
+                ['Topic', 'Physics'],
+                ['Difficulty', 'Medium'],
+                ['Questions', '10'],
+              ].map(([label, value]) => (
+                <div
+                  key={label}
+                  className="flex justify-between border-b border-[#24262d] py-2 text-[#a2a4b1] last:border-0 lg:py-4"
+                >
+                  {label}
+                  <strong className="text-[#f4f4f6]">{value}</strong>
+                </div>
+              ))}
+            </div>
+          </article>
+        </div>
 
-              md:px-8
+        {/* Feature Cards */}
+        <div className="mt-3 grid gap-3 md:grid-cols-3 lg:mt-6 lg:gap-6">
+          <article className="rounded-xl border border-[#24262d] bg-[#14151b] p-4 sm:p-5 lg:rounded-[24px] lg:p-9">
+            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#1d1f27] text-[#c4f52c] lg:h-14 lg:w-14">
+              <Users className="h-3.5 w-3.5 lg:h-7 lg:w-7" />
+            </span>
 
-              lg:px-12
+            <h3 className="mt-3 text-sm font-bold lg:mt-7 lg:text-[24px]">Friends</h3>
 
-              xl:px-16
+            <p className="mt-1.5 text-[10px] leading-4 text-[#a2a4b1] lg:mt-3 lg:text-base lg:leading-6">
+              Search by username, send requests and bring friends into your
+              battles.
+            </p>
 
-              2xl:px-20
-            "
-          >
-            <motion.div
-              initial={{
-                opacity: 0,
-                y: 30,
-              }}
-              whileInView={{
-                opacity: 1,
-                y: 0,
-              }}
-              viewport={{
-                once: true,
-              }}
-              transition={{
-                duration: 0.7,
-              }}
-              className="
-                w-full
-                overflow-hidden
-                rounded-[28px]
-                bg-[#063b49]
-                px-5
-                py-12
-                text-center
+            <div className="mt-3 flex">
+              {['A', 'B', 'C'].map((initial) => (
+                <span
+                  key={initial}
+                  className="-mr-1 flex h-6 w-6 items-center justify-center rounded-full border border-[#14151b] bg-[#30323d] text-[9px] font-semibold lg:h-10 lg:w-10 lg:text-sm"
+                >
+                  {initial}
+                </span>
+              ))}
 
-                sm:px-10
-                sm:py-16
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#c4f52c] text-[#101109] lg:h-10 lg:w-10">
+                <Plus className="h-3 w-3 lg:h-5 lg:w-5" />
+              </span>
+            </div>
+          </article>
 
-                lg:px-16
-              "
-            >
-              <div
-                className="
-                  mx-auto
-                  flex
-                  h-12
-                  w-12
-                  items-center
-                  justify-center
-                  rounded-2xl
-                  bg-white/10
-                "
-              >
-                <Swords className="h-6 w-6 text-[#00d98b]" />
-              </div>
+          <article className="rounded-xl border border-[#24262d] bg-[#14151b] p-4 sm:p-5 lg:rounded-[24px] lg:p-9">
+            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#1d1f27] text-[#c4f52c] lg:h-14 lg:w-14">
+              <Code2 className="h-3.5 w-3.5 lg:h-7 lg:w-7" />
+            </span>
 
-              <h2
-                className="
-                  mt-5
-                  text-[clamp(1.8rem,5vw,3rem)]
-                  font-bold
-                  tracking-tight
-                  text-white
-                "
-              >
-                Ready to test yourself?
-              </h2>
+            <h3 className="mt-3 text-sm font-bold lg:mt-7 lg:text-[24px]">Coding practice</h3>
 
-              <p
-                className="
-                  mx-auto
-                  mt-4
-                  max-w-xl
-                  text-sm
-                  leading-6
-                  text-slate-300
+            <p className="mt-1.5 text-[10px] leading-4 text-[#a2a4b1] lg:mt-3 lg:text-base lg:leading-6">
+              Go beyond multiple choice with programming challenges.
+            </p>
 
-                  sm:text-base
-                "
-              >
-                Create your account and start competing with
-                players from around the world.
+            <pre className="mt-2 overflow-x-auto rounded-lg border border-[#24262d] bg-[#0b0c10] p-2.5 text-[8px] leading-4 text-[#a2a4b1] lg:mt-5 lg:rounded-xl lg:p-4 lg:text-sm lg:leading-6">
+              <code>
+                {'function reverse(s) {\n  // your solution\n}'}
+              </code>
+            </pre>
+          </article>
+
+          <article className="rounded-xl border border-[#24262d] bg-[#14151b] p-4 sm:p-5 lg:rounded-[24px] lg:p-9">
+            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#1d1f27] text-[#c4f52c] lg:h-14 lg:w-14">
+              <BarChart3 className="h-3.5 w-3.5 lg:h-7 lg:w-7" />
+            </span>
+
+            <h3 className="mt-3 text-sm font-bold lg:mt-7 lg:text-[24px]">Leaderboard</h3>
+
+            <p className="mt-1.5 text-[10px] leading-4 text-[#a2a4b1] lg:mt-3 lg:text-base lg:leading-6">
+              Compare rankings and watch your progress climb.
+            </p>
+
+            <div className="mt-3 flex h-10 items-end gap-1.5 lg:mt-5 lg:h-24 lg:gap-3">
+              {[
+                ['h-4 lg:h-8', false],
+                ['h-6 lg:h-12', false],
+                ['h-5 lg:h-10', false],
+                ['h-8 lg:h-16', false],
+                ['h-12 lg:h-24', true],
+              ].map(([height, highlight], index) => (
+                <span
+                  key={index}
+                  className={`flex-1 rounded-t bg-[#2b2e3a] ${height} ${
+                    highlight ? 'bg-[#c4f52c]' : ''
+                  }`}
+                />
+              ))}
+            </div>
+          </article>
+        </div>
+      </section>
+
+      {/* Three Steps */}
+      <section className="mx-auto max-w-[1400px] px-6 py-10 sm:px-8 lg:px-0 lg:py-24">
+        <h2 className="text-xl font-bold tracking-tight sm:text-2xl lg:text-[44px]">
+          Start in three simple steps
+        </h2>
+
+        <div className="mt-5 grid gap-5 border-t border-[#24262d] pt-4 sm:grid-cols-3 sm:gap-6 lg:mt-10 lg:gap-6 lg:pt-8">
+          {[
+            [
+              '01',
+              'Choose what to learn',
+              'Pick a subject, topic and difficulty that fits you.',
+            ],
+            [
+              '02',
+              'Practise or challenge',
+              'Take a quiz alone or invite friends to a live battle.',
+            ],
+            [
+              '03',
+              'Track your progress',
+              'Review results and climb the leaderboard.',
+            ],
+          ].map(([number, title, description]) => (
+            <div key={number}>
+              <span className="text-[10px] font-bold text-[#c4f52c] lg:text-base">
+                {number}
+              </span>
+
+              <h3 className="mt-2 text-sm font-bold lg:mt-4 lg:text-2xl">{title}</h3>
+
+              <p className="mt-1.5 text-[10px] leading-4 text-[#a2a4b1] lg:mt-3 lg:text-lg lg:leading-7">
+                {description}
               </p>
+            </div>
+          ))}
+        </div>
+      </section>
 
+      {/* CTA Section */}
+      {!user && (
+        <section className="mx-auto max-w-[1400px] px-6 py-10 sm:px-8 lg:px-0 lg:py-14">
+          <div className="rounded-2xl bg-[#c4f52c] px-5 py-10 text-center text-[#101109] sm:py-11 lg:rounded-[28px] lg:px-12 lg:py-20">
+            <h2 className="text-3xl font-bold tracking-[-0.04em] sm:text-[32px] lg:text-[56px]">
+              Ready to enter the arena?
+            </h2>
+
+            <p className="mt-2 text-xs text-[#30391a] lg:mt-4 lg:text-xl">
+              Join QuizArena and make every study session count.
+            </p>
+
+            <div className="mt-5 flex flex-wrap justify-center gap-2 lg:mt-8 lg:gap-3">
               <Link
                 to="/register"
-                className="
-                  group
-                  mt-7
-                  inline-flex
-                  min-h-12
-                  items-center
-                  justify-center
-                  gap-2
-                  rounded-2xl
-                  bg-[#00d98b]
-                  px-7
-                  py-3
-                  text-sm
-                  font-semibold
-                  text-[#063b49]
-                  transition-all
-                  duration-300
-                  hover:-translate-y-1
-                  hover:shadow-xl
-                "
+                className="inline-flex h-8 items-center gap-2 rounded-lg bg-[#0b0c10] px-3.5 text-[10px] font-semibold text-white hover:bg-[#24262d] lg:h-14 lg:gap-3 lg:rounded-xl lg:px-7 lg:text-base"
               >
-                Create Account
-
-                <ArrowRight
-                  className="
-                    h-4
-                    w-4
-                    transition-transform
-                    duration-300
-                    group-hover:translate-x-1
-                  "
-                />
+                Create your account <ArrowRight className="h-3 w-3" />
               </Link>
-            </motion.div>
-          </section>
-        )}
-      </div>
+
+              <Link
+                to="/quizzes"
+                className="inline-flex h-8 items-center rounded-lg border border-[#52651d] px-3.5 text-[10px] font-semibold hover:bg-[#d5ff45] lg:h-14 lg:rounded-xl lg:px-7 lg:text-base"
+              >
+                Browse quizzes
+              </Link>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Responsive Footer */}
+      <footer className="border-t border-[#181a20]">
+        <div className="mx-auto grid max-w-[1400px] grid-cols-2 gap-x-8 gap-y-8 px-6 py-8 sm:grid-cols-4 sm:gap-8 sm:px-8 lg:px-0 lg:py-16">
+          {/* Brand */}
+          <div className="col-span-2 sm:col-span-1">
+            <Link
+              to="/"
+              className="inline-flex items-center gap-2 text-sm font-bold lg:gap-3 lg:text-2xl"
+            >
+              <span className="flex h-5 w-5 items-center justify-center rounded-md bg-[#c4f52c] text-[10px] font-black text-[#101109] lg:h-10 lg:w-10 lg:text-lg">
+                Q
+              </span>
+              QuizArena
+            </Link>
+
+            <p className="mt-2 text-[10px] text-[#a2a4b1] lg:mt-4 lg:text-base">
+              Learn, practise and compete.
+            </p>
+          </div>
+
+          {/* Product */}
+          <div>
+            <h3 className="text-[10px] font-bold lg:text-lg">Product</h3>
+
+            <div className="mt-2 flex flex-col gap-1.5 text-[10px] text-[#a2a4b1] lg:mt-4 lg:gap-3 lg:text-base">
+              <Link to="/quizzes" className="transition hover:text-[#c4f52c]">
+                Quizzes
+              </Link>
+
+              <Link to="/battle" className="transition hover:text-[#c4f52c]">
+                Battles
+              </Link>
+
+              <Link to="/coding" className="transition hover:text-[#c4f52c]">
+                Coding
+              </Link>
+
+              <Link
+                to="/my-results"
+                className="transition hover:text-[#c4f52c]"
+              >
+                Leaderboard
+              </Link>
+            </div>
+          </div>
+
+          {/* Community */}
+          <div>
+            <h3 className="text-[10px] font-bold lg:text-lg">Community</h3>
+
+            <div className="mt-2 flex flex-col gap-1.5 text-[10px] text-[#a2a4b1] lg:mt-4 lg:gap-3 lg:text-base">
+              <Link
+                to={user ? '/profile' : '/login'}
+                className="transition hover:text-[#c4f52c]"
+              >
+                Friends
+              </Link>
+
+              <Link
+                to={user ? '/profile' : '/login'}
+                className="transition hover:text-[#c4f52c]"
+              >
+                Profile
+              </Link>
+            </div>
+          </div>
+
+          {/* Company */}
+          <div>
+            <h3 className="text-[10px] font-bold lg:text-lg">Company</h3>
+
+            <div className="mt-2 flex flex-col gap-1.5 text-[10px] text-[#a2a4b1] lg:mt-4 lg:gap-3 lg:text-base">
+              <Link to="/about" className="transition hover:text-[#c4f52c]">
+                About
+              </Link>
+
+              <Link to="/login" className="transition hover:text-[#c4f52c]">
+                Log in
+              </Link>
+            </div>
+          </div>
+        </div>
+      </footer>
     </main>
   );
 };

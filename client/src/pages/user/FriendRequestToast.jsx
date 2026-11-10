@@ -1,145 +1,100 @@
-import { useCallback, useEffect, useState } from "react";
-import { Bell, Check, X } from "lucide-react";
+import { useCallback, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
+import { useAuth } from "../../context/AuthContext";
 import { apiRequest, jsonBody } from "../../lib/api";
 import socket, { connectSocket } from "../../socket";
 
-const REFRESH_EVENT = "quizarena:friend-requests-changed";
+const REFRESH_EVENT = "quizarena:notifications-changed";
+
+const notificationText = (notification) => {
+  const actor = notification.actor?.name || notification.actor?.username;
+  if (notification.message) return notification.message;
+  if (notification.type === "battle_invite") {
+    return `${actor || "A friend"} invited you to a battle room.`;
+  }
+  return `${actor || "Someone"} sent you a friend request.`;
+};
 
 export default function FriendRequestToast() {
-  const [request, setRequest] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const navigate = useNavigate();
+  const { user } = useAuth();
 
-  const refreshNotifications = useCallback(() => {
-    window.dispatchEvent(new Event(REFRESH_EVENT));
-  }, []);
+  const showNotification = useCallback(
+    (notification) => {
+      if (!notification?._id) return;
+      const options = {
+        id: `notification-${notification._id}`,
+        description: notificationText(notification),
+        duration: 8000,
+        action: {
+          label: notification.type === "battle_invite" ? "Join" : "View",
+          onClick: async () => {
+            if (notification.type !== "battle_invite") {
+              navigate("/notifications");
+              return;
+            }
+
+            try {
+              const invitation = await apiRequest(
+                `/notifications/${notification._id}/respond`,
+                {
+                  method: "PATCH",
+                  body: jsonBody({ action: "accept" }),
+                }
+              );
+              const joined = await apiRequest("/room/join", {
+                method: "POST",
+                body: jsonBody({ roomCode: invitation.roomCode }),
+              });
+              await apiRequest(`/notifications/${notification._id}/read`, {
+                method: "PATCH",
+              });
+              window.dispatchEvent(new Event(REFRESH_EVENT));
+              navigate(`/battle/${joined.room?._id || invitation.roomId}`);
+            } catch (error) {
+              toast.error(error.message || "Unable to join this battle.");
+            }
+          },
+        },
+      };
+
+      toast(notification.title || "New notification", options);
+    },
+    [navigate]
+  );
 
   useEffect(() => {
+    if (!user?._id) return undefined;
     const token = localStorage.getItem("token");
-    if (!token) return;
+    if (!token) return undefined;
 
-    const handleRequest = (payload = {}) => {
-      const sender = payload.requester || payload.user || {};
+    const handleNotification = (notification) => {
+      showNotification(notification);
+      window.dispatchEvent(new Event(REFRESH_EVENT));
+    };
 
-      setRequest({
-        requestId: payload.requestId || payload._id,
-        sender,
+    if (socket.connected && socket.auth?.token !== token) {
+      socket.disconnect();
+    }
+    connectSocket(token);
+    socket.on("notification-received", handleNotification);
+
+    apiRequest("/notifications")
+      .then((data) => {
+        (data.notifications || [])
+          .filter((item) => !item.readAt)
+          .slice(0, 5)
+          .forEach(showNotification);
+      })
+      .catch((error) => {
+        console.error("Unable to load unread notifications:", error);
       });
 
-      setError("");
-      refreshNotifications();
-    };
-
-    socket.on("friend-request-received", handleRequest);
-
-    try {
-      connectSocket(token);
-    } catch (err) {
-      console.error("Socket connection failed:", err);
-    }
-
     return () => {
-      socket.off("friend-request-received", handleRequest);
+      socket.off("notification-received", handleNotification);
     };
-  }, [refreshNotifications]);
+  }, [showNotification, user?._id]);
 
-  const respond = async (action) => {
-    if (!request?.requestId || loading) return;
-
-    setLoading(true);
-    setError("");
-
-    try {
-      await apiRequest(
-        `/friends/request/${request.requestId}/respond`,
-        {
-          method: "PATCH",
-          body: jsonBody({ action }),
-        }
-      );
-
-      setRequest(null);
-      refreshNotifications();
-    } catch (err) {
-      setError(err.message || "Unable to update friend request.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (!request) return null;
-
-  const senderName =
-    request.sender?.name ||
-    request.sender?.username ||
-    "Someone";
-
-  return (
-    <div className="fixed right-3 top-3 z-[200] w-[calc(100%-1.5rem)] max-w-sm sm:right-5 sm:top-5">
-      <div
-        role="alert"
-        className="overflow-hidden rounded-2xl border border-violet-100 bg-white shadow-2xl"
-      >
-        <div className="flex items-start gap-3 p-4">
-          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-violet-100 text-violet-700">
-            <Bell size={21} />
-          </div>
-
-          <div className="min-w-0 flex-1">
-            <h3 className="font-extrabold text-slate-900">
-              New friend request
-            </h3>
-
-            <p className="mt-1 break-words text-sm text-slate-600">
-              <span className="font-bold">{senderName}</span>
-              {" "}sent you a friend request.
-            </p>
-
-            {request.sender?.username && (
-              <p className="mt-1 text-xs text-slate-500">
-                @{request.sender.username}
-              </p>
-            )}
-          </div>
-
-          <button
-            type="button"
-            aria-label="Dismiss"
-            onClick={() => setRequest(null)}
-            className="rounded-full p-1.5 text-slate-400 hover:bg-slate-100"
-          >
-            <X size={18} />
-          </button>
-        </div>
-
-        {error && (
-          <p className="mx-4 mb-3 rounded-lg bg-rose-50 p-2 text-sm text-rose-700">
-            {error}
-          </p>
-        )}
-
-        <div className="grid grid-cols-2 gap-2 border-t border-slate-100 bg-slate-50 p-3">
-          <button
-            type="button"
-            disabled={loading}
-            onClick={() => respond("reject")}
-            className="flex min-h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white text-sm font-bold text-slate-700 hover:bg-slate-100 disabled:opacity-50"
-          >
-            <X size={16} />
-            Reject
-          </button>
-
-          <button
-            type="button"
-            disabled={loading}
-            onClick={() => respond("accept")}
-            className="flex min-h-10 items-center justify-center gap-2 rounded-xl bg-emerald-600 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-50"
-          >
-            <Check size={16} />
-            {loading ? "Saving..." : "Accept"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
+  return null;
 }

@@ -270,9 +270,120 @@ exports.joinRoom = async (req, res) => {
     );
 
     if (existingPlayer?.isRemoved) {
-      return res.status(403).json({
-        success: false,
-        message: "You were removed from this room and cannot rejoin.",
+      if (String(existingPlayer.removedBy) !== String(userId)) {
+        return res.status(403).json({
+          success: false,
+          message: "You were removed from this room and cannot rejoin.",
+        });
+      }
+
+      const rejoinedRoom = await Room.findOneAndUpdate(
+        {
+          _id: room._id,
+          gameMode: "BATTLE",
+          status: "Waiting",
+          isQuizEnded: { $ne: true },
+          players: {
+            $elemMatch: {
+              user: userId,
+              isRemoved: true,
+              removedBy: userId,
+            },
+          },
+          $expr: {
+            $lt: [
+              {
+                $size: {
+                  $filter: {
+                    input: { $ifNull: ["$players", []] },
+                    as: "player",
+                    cond: { $ne: ["$$player.isRemoved", true] },
+                  },
+                },
+              },
+              "$maxPlayers",
+            ],
+          },
+        },
+        {
+          $set: {
+            "players.$.isRemoved": false,
+            "players.$.isReady": false,
+            "players.$.removedAt": null,
+            "players.$.removedBy": null,
+            "players.$.joinedAt": new Date(),
+            "players.$.responseId": null,
+            "players.$.score": 0,
+            "players.$.totalAnswerTime": 0,
+            "players.$.answeredQuestions": 0,
+          },
+        },
+        { new: true, runValidators: true }
+      );
+
+      if (!rejoinedRoom) {
+        const latestRoom = await Room.findById(room._id);
+        if (!latestRoom) {
+          return res.status(404).json({
+            success: false,
+            message: "Room not found.",
+          });
+        }
+
+        const latestPlayer = latestRoom.players.find(
+          (player) => String(player.user) === String(userId)
+        );
+        if (!latestPlayer || !latestPlayer.isRemoved) {
+          return res.status(200).json({
+            success: true,
+            alreadyJoined: true,
+            message: "You are already in this room.",
+            room: latestRoom,
+          });
+        }
+
+        if (String(latestPlayer.removedBy) !== String(userId)) {
+          return res.status(403).json({
+            success: false,
+            message: "You were removed from this room and cannot rejoin.",
+          });
+        }
+
+        if (
+          latestRoom.status !== "Waiting" ||
+          latestRoom.gameMode !== "BATTLE" ||
+          latestRoom.isQuizEnded
+        ) {
+          return res.status(400).json({
+            success: false,
+            message: "This room is not accepting players.",
+          });
+        }
+
+        const activePlayerCount = latestRoom.players.filter(
+          (player) => !player.isRemoved
+        ).length;
+        if (activePlayerCount < latestRoom.maxPlayers) {
+          return res.status(409).json({
+            success: false,
+            message: "Room membership changed. Please try joining again.",
+          });
+        }
+
+        return res.status(400).json({
+          success: false,
+          message: "Room is full.",
+        });
+      }
+
+      const io = req.app.get("io");
+      emitRoomUpdated(io, rejoinedRoom);
+      emitPublicBattlesUpdated(io, rejoinedRoom);
+
+      return res.status(200).json({
+        success: true,
+        message: "Rejoined room successfully.",
+        room: rejoinedRoom,
       });
     }
 
@@ -358,7 +469,10 @@ exports.joinRoom = async (req, res) => {
         (player) => player.user.toString() === userId.toString()
       );
 
-      if (latestPlayer?.isRemoved) {
+      if (
+        latestPlayer?.isRemoved &&
+        String(latestPlayer.removedBy) !== String(userId)
+      ) {
         return res.status(403).json({
           success: false,
           message: "You were removed from this room and cannot rejoin.",

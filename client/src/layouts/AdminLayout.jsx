@@ -1,5 +1,5 @@
 import { Outlet, Navigate } from 'react-router-dom';
-import Sidebar from '../components/Sidebar';
+import WorkspaceSidebar from '../components/WorkspaceSidebar';
 import { useAuth } from '../context/AuthContext';
 
 const AdminLayout = () => {
@@ -22,9 +22,9 @@ const AdminLayout = () => {
   }
 
   return (
-    <div className="flex min-h-screen min-w-0 flex-col bg-gray-100 md:flex-row">
-      <Sidebar />
-      <main className="min-w-0 flex-1 p-4 sm:p-6 md:h-screen md:overflow-y-auto lg:p-8">
+    <div className="workspace-theme flex min-h-screen min-w-0 flex-col bg-[#0b0c10] md:flex-row">
+      <WorkspaceSidebar />
+      <main className="min-w-0 flex-1 bg-[#0b0c10]">
         <Outlet />
       </main>
     </div>
